@@ -1,0 +1,232 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-bg-border;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code, pre, .mono {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  /* Card styles */
+  .card {
+    @apply bg-bg-secondary border border-bg-border rounded-xl;
+  }
+
+  /* Input styles */
+  .input {
+    @apply bg-bg-input border border-bg-border rounded-lg px-4 py-2 text-text-primary;
+    @apply focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-accent-cyan;
+    @apply transition-all duration-150;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-accent-cyan text-bg-primary;
+    @apply hover:bg-opacity-90;
+    @apply focus:ring-accent-cyan;
+  }
+
+  .btn-secondary {
+    @apply bg-bg-tertiary text-text-primary border border-bg-border;
+    @apply hover:bg-bg-border;
+  }
+
+  .btn-danger {
+    @apply bg-accent-red text-white;
+    @apply hover:bg-opacity-90;
+    @apply focus:ring-accent-red;
+  }
+
+  /* Scrollbar styles */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-bg-secondary;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-bg-border rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-secondary;
+  }
+
+  /* Loading shimmer effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #0a1628 0%,
+      #0f1e35 50%,
+      #0a1628 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Severity badge base */
+  .severity-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border;
+  }
+
+  /* Status indicator dot */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  /* Monospace text */
+  .mono {
+    @apply font-mono text-sm;
+  }
+
+  /* Chart container */
+  .chart-container {
+    @apply w-full h-full;
+  }
+
+  /* Tooltip styles */
+  .tooltip {
+    @apply bg-bg-secondary border border-bg-border rounded-lg shadow-lg;
+  }
+}
+
+@layer utilities {
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-cyan to-accent-purple bg-clip-text text-transparent;
+  }
+
+  /* Glow effect */
+  .glow {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  }
+
+  /* Pulse animation for critical items */
+  .pulse-critical {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Fade in animation */
+  .fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Leaflet map overrides for dark theme */
+.leaflet-container {
+  @apply bg-bg-primary;
+}
+
+.leaflet-popup-content-wrapper {
+  @apply bg-bg-secondary text-text-primary border border-bg-border;
+}
+
+.leaflet-popup-tip {
+  @apply bg-bg-secondary;
+}
+
+/* React Markdown styles */
+.markdown-content {
+  @apply text-text-primary;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  @apply font-semibold text-text-primary mt-6 mb-3;
+}
+
+.markdown-content h1 {
+  @apply text-2xl;
+}
+
+.markdown-content h2 {
+  @apply text-xl;
+}
+
+.markdown-content h3 {
+  @apply text-lg;
+}
+
+.markdown-content p {
+  @apply mb-4 leading-relaxed;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  @apply mb-4 ml-6;
+}
+
+.markdown-content li {
+  @apply mb-2;
+}
+
+.markdown-content code {
+  @apply bg-bg-tertiary px-1.5 py-0.5 rounded text-accent-cyan font-mono text-sm;
+}
+
+.markdown-content pre {
+  @apply bg-bg-tertiary p-4 rounded-lg overflow-x-auto mb-4;
+}
+
+.markdown-content pre code {
+  @apply bg-transparent p-0;
+}
+
+.markdown-content strong {
+  @apply font-semibold text-text-primary;
+}
+
+.markdown-content a {
+  @apply text-accent-cyan hover:underline;
+}
