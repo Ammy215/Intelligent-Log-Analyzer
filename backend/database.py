@@ -19,14 +19,14 @@ class DatabaseManager:
         """Establish async connection to MongoDB."""
         cls._client = AsyncIOMotorClient(settings.mongodb_uri)
         cls._db = cls._client[settings.database_name]
-        print(f"✓ Connected to MongoDB: {settings.database_name}")
+        print(f"Connected to MongoDB: {settings.database_name}")
 
     @classmethod
     async def disconnect(cls) -> None:
         """Close async MongoDB connection."""
         if cls._client is not None:
             cls._client.close()
-            print("✓ Disconnected from MongoDB")
+            print("Disconnected from MongoDB")
 
     @classmethod
     def get_db(cls) -> AsyncIOMotorDatabase:
@@ -92,4 +92,4 @@ async def create_indexes() -> None:
     await incidents.create_index("status")
     await incidents.create_index("created_at")
 
-    print("✓ Database indexes created")
+    print("Database indexes created")

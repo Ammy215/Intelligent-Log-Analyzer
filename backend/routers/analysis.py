@@ -14,9 +14,9 @@ from typing import Optional
 import pandas as pd
 from fastapi import APIRouter, Query, HTTPException
 
-from backend.database import get_logs_collection, get_threat_actors_collection
-from backend.analyzers.threat_scorer import calculate_threat_score, get_threat_verdict
-from backend.threat_intel.ip_profiler import get_ip_profiler
+from database import get_logs_collection, get_threat_actors_collection
+from analyzers.threat_scorer import calculate_threat_score, get_threat_verdict
+from threat_intel.ip_profiler import get_ip_profiler
 
 router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
 

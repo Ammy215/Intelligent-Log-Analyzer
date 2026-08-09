@@ -9,7 +9,7 @@ import aiohttp
 import logging
 from typing import Dict, Optional
 
-from backend.threat_intel.cache import cached_threat_intel
+from threat_intel.cache import cached_threat_intel
 
 
 logger = logging.getLogger(__name__)

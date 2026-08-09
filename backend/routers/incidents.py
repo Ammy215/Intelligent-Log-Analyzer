@@ -12,12 +12,12 @@ from typing import Optional
 from bson.objectid import ObjectId
 from fastapi import APIRouter, Query, HTTPException, Body
 
-from backend.database import (
+from database import (
     get_logs_collection,
     get_incidents_collection,
     get_threat_actors_collection,
 )
-from backend.models.incident import Incident, ThreatActor
+from models.incident import Incident, ThreatActor
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
 

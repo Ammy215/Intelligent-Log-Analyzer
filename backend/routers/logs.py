@@ -13,9 +13,9 @@ from typing import Optional
 from fastapi import APIRouter, File, UploadFile, Query, HTTPException
 from bson import ObjectId
 
-from backend.database import get_logs_collection
-from backend.models.log_entry import LogEntry
-from backend.parsers.ssh_parser import SSHParser
+from database import get_logs_collection
+from models.log_entry import LogEntry
+from parsers.ssh_parser import SSHParser
 
 router = APIRouter(prefix="/api/v1/logs", tags=["logs"])
 ssh_parser = SSHParser()
@@ -35,7 +35,7 @@ async def upload_log_file(file: UploadFile = File(...)) -> dict:
         Dictionary with upload results and parsed count
     """
     try:
-        from backend.analyzers.threat_scorer import calculate_threat_score
+        from analyzers.threat_scorer import calculate_threat_score
         
         contents = await file.read()
         text = contents.decode("utf-8")
@@ -90,7 +90,7 @@ async def ingest_single_log(log_entry: LogEntry) -> dict:
         Dictionary with insert result and ID
     """
     try:
-        from backend.analyzers.threat_scorer import calculate_threat_score
+        from analyzers.threat_scorer import calculate_threat_score
         
         logs_collection = await get_logs_collection()
 

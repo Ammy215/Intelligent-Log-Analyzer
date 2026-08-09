@@ -10,7 +10,7 @@ import aiohttp
 import logging
 from typing import Optional, Dict, AsyncGenerator
 
-from backend.config import settings
+from config import settings
 
 
 logger = logging.getLogger(__name__)

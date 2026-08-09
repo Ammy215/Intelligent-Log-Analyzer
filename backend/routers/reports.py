@@ -13,10 +13,10 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.database import get_logs_collection, get_incidents_collection
-from backend.threat_intel.ip_profiler import get_ip_profiler
-from backend.report_generator.ai_client import get_ai_client
-from backend.report_generator.models import (
+from database import get_logs_collection, get_incidents_collection
+from threat_intel.ip_profiler import get_ip_profiler
+from report_generator.ai_client import get_ai_client
+from report_generator.models import (
     ReportMetadata,
     ReportRequest,
     ExecutiveSummary,

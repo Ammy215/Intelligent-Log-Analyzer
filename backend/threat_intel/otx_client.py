@@ -10,8 +10,8 @@ import asyncio
 import logging
 from typing import Dict, Optional, List
 
-from backend.threat_intel.cache import cached_threat_intel
-from backend.config import settings
+from threat_intel.cache import cached_threat_intel
+from config import settings
 
 
 logger = logging.getLogger(__name__)

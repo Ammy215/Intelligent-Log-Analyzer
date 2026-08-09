@@ -37,9 +37,9 @@ async def lifespan(app: FastAPI):
     try:
         await DatabaseManager.connect()
         await create_indexes()
-        logger.info("✓ Application ready")
+        logger.info("Application ready")
     except Exception as e:
-        logger.error(f"✗ Startup failed: {e}")
+        logger.error(f"Startup failed: {e}")
         raise
 
     yield
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down...")
     await DatabaseManager.disconnect()
-    logger.info("✓ Shutdown complete")
+    logger.info("Shutdown complete")
 
 
 # Create FastAPI app with lifespan
