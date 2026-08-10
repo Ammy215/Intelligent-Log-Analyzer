@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from analyzers.threat_scorer import get_org_weights
 from database import get_logs_collection, get_incidents_collection
 from middleware.auth import CurrentUser, get_current_user
+from middleware.rate_limit import rate_limit_by_org
 from threat_intel.ip_profiler import get_ip_profiler
 from report_generator.ai_client import get_ai_client
 from report_generator.gemini_client import GeminiError, generate_incident_report as gemini_generate_incident_report
@@ -31,7 +32,7 @@ router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 
 @router.post("/executive/{ip}")
-async def generate_executive_summary(ip: str, user: CurrentUser = Depends(get_current_user)) -> dict:
+async def generate_executive_summary(ip: str, user: CurrentUser = Depends(rate_limit_by_org("ai_analyst", 5, 60))) -> dict:
     """Generate executive summary for an IP address.
     
     Args:
@@ -72,7 +73,7 @@ async def generate_executive_summary(ip: str, user: CurrentUser = Depends(get_cu
 
 
 @router.post("/incident/{incident_id}")
-async def generate_incident_report(incident_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
+async def generate_incident_report(incident_id: str, user: CurrentUser = Depends(rate_limit_by_org("ai_analyst", 5, 60))) -> dict:
     """Generate an AI incident report from real incident data (Gemini SDK,
     direct call — no LangChain). Credit-metered: 1 credit per report,
     checked BEFORE generation and only deducted AFTER Gemini actually
@@ -141,7 +142,7 @@ async def generate_incident_report(incident_id: str, user: CurrentUser = Depends
 async def generate_remediation_plan(
     threat_factors: list = Query(..., description="List of threat factors"),
     risk_level: str = Query(..., description="Risk level: SAFE, SUSPICIOUS, HIGH_RISK, CRITICAL"),
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(rate_limit_by_org("ai_analyst", 5, 60)),
 ) -> dict:
     """Generate remediation and prevention plan.
     
@@ -176,7 +177,7 @@ async def generate_remediation_plan(
 
 
 @router.post("/summary-statistics")
-async def generate_summary_statistics(user: CurrentUser = Depends(get_current_user)) -> dict:
+async def generate_summary_statistics(user: CurrentUser = Depends(rate_limit_by_org("ai_analyst", 5, 60))) -> dict:
     """Generate summary statistics report for all logs.
     
     Returns:

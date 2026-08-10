@@ -3,10 +3,28 @@
 Models define the expected structure of documents and API payloads.
 Pydantic v2 provides automatic validation, JSON schema generation, and serialization.
 """
+import re
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+# Log content is attacker-controlled input (Phase 11 security pass — this
+# didn't exist before). Strips control characters (log/terminal injection
+# vector: \r, ANSI escapes, null bytes) and caps length (storage-bloat /
+# DoS vector) at the point every log entry is constructed, regardless of
+# which parser built it or whether it came from /ingest's raw JSON body.
+# Does NOT strip '<'/'>' or HTML-looking content — the frontend never uses
+# dangerouslySetInnerHTML, so React's default text rendering already
+# escapes that safely; stripping it here would just lossily mangle
+# legitimate log content for no real defensive gain.
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+MAX_RAW_LOG_LENGTH = 4096
+MAX_TEXT_FIELD_LENGTH = 256
+
+
+def _sanitize(value: str, max_length: int) -> str:
+    return _CONTROL_CHARS.sub("", value)[:max_length]
 
 
 class GeoModel(BaseModel):
@@ -54,6 +72,18 @@ class LogEntry(BaseModel):
     ai_summary: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     incident_id: Optional[str] = None
+
+    @field_validator("raw_log")
+    @classmethod
+    def _sanitize_raw_log(cls, v: str) -> str:
+        return _sanitize(v, MAX_RAW_LOG_LENGTH)
+
+    @field_validator("username", "target_service", "event_type")
+    @classmethod
+    def _sanitize_text_fields(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return _sanitize(v, MAX_TEXT_FIELD_LENGTH)
 
     class Config:
         """Pydantic config."""

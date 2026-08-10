@@ -9,11 +9,13 @@ This is the main application that orchestrates:
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import settings
 from database import DatabaseManager, create_indexes
+from middleware.rate_limit import global_rate_limit
 from routers import logs, analysis, incidents, reports, auth, billing, admin
 
 # Configure logging
@@ -68,6 +70,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Global rate limit — 200/15min per IP, the ceiling behind every more
+# specific per-category limit (auth/ingest/AI analyst) applied at the
+# router level. Scoped to /api/v1 only — /docs, /openapi.json, and /health
+# stay unlimited (dev tooling and uptime checks, not attacker-reachable
+# expensive operations).
+@app.middleware("http")
+async def _global_rate_limit_middleware(request: Request, call_next):
+    if request.url.path.startswith("/api/v1"):
+        try:
+            await global_rate_limit(request)
+        except HTTPException as e:
+            return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+    return await call_next(request)
 
 
 # Root endpoint

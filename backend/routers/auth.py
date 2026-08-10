@@ -24,6 +24,7 @@ from db.supabase import (
     rest_select,
 )
 from middleware.auth import CurrentUser, get_current_user
+from middleware.rate_limit import rate_limit_by_ip
 from middleware.rbac import require_role
 from notifications.resend_client import ResendError, send_email
 
@@ -48,7 +49,7 @@ class ResendVerificationRequest(BaseModel):
     email: str
 
 
-@router.post("/signup")
+@router.post("/signup", dependencies=[Depends(rate_limit_by_ip("auth", 10, 900))])
 async def signup(body: SignupRequest) -> dict:
     """Create a Supabase Auth user, a new organization, and an admin profile.
 
@@ -122,7 +123,7 @@ async def signup(body: SignupRequest) -> dict:
     }
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit_by_ip("auth", 10, 900))])
 async def login(body: LoginRequest, request: Request) -> dict:
     """Exchange email/password for a Supabase access token."""
     ip_address = request.client.host if request.client else None

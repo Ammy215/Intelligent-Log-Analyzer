@@ -13,8 +13,10 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile, Query, HTTPException
 from bson import ObjectId
 
+from config import settings
 from database import get_logs_collection
 from middleware.auth import CurrentUser, get_current_user
+from middleware.rate_limit import rate_limit_by_org
 from models.log_entry import LogEntry
 from parsers.ssh_parser import SSHParser
 from parsers.windows_event_parser import WindowsEventParser
@@ -31,7 +33,7 @@ FLAGGED_SEVERITIES = {"HIGH", "CRITICAL"}
 async def upload_log_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(rate_limit_by_org("ingest", 60, 60)),
 ) -> dict:
     """Upload a raw log file for parsing.
 
@@ -52,8 +54,25 @@ async def upload_log_file(
     try:
         from analyzers.threat_scorer import calculate_threat_score, get_org_weights
 
-        contents = await file.read()
         filename = (file.filename or "").lower()
+        extension = "." + filename.rsplit(".", 1)[-1] if "." in filename else ""
+        if extension not in settings.allowed_extensions_list:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File extension {extension!r} not allowed. Allowed: {settings.allowed_extensions_list}",
+            )
+
+        # Phase 11: max_file_size_mb was declared in config since Phase 0
+        # but never actually enforced anywhere — read the upload cap-first
+        # via a size-limited read rather than file.read() unbounded, so an
+        # oversized upload is rejected before it's fully buffered in memory.
+        max_bytes = settings.max_file_size_mb * 1024 * 1024
+        contents = await file.read(max_bytes + 1)
+        if len(contents) > max_bytes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File exceeds max size of {settings.max_file_size_mb}MB",
+            )
 
         if filename.endswith(".evtx"):
             # Binary format — extract per-record XML strings first, no text decode
@@ -108,6 +127,8 @@ async def upload_log_file(
             "enrichment_queued_for": list(flagged_ips),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"File processing error: {str(e)}")
 
@@ -116,7 +137,7 @@ async def upload_log_file(
 async def ingest_single_log(
     background_tasks: BackgroundTasks,
     log_entry: LogEntry,
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(rate_limit_by_org("ingest", 60, 60)),
 ) -> dict:
     """Ingest a single structured log entry as JSON.
 
