@@ -100,7 +100,7 @@ instance, so there's nothing to install).
 | `OTX_API_KEY` | threat pulses | free |
 | `IPINFO_TOKEN` | geolocation | 50k/month |
 | `OPENAI_API_KEY` | AI analyst | pay-as-you-go |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID_PRO` | billing | free to integrate, test mode |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` | billing | free to integrate, sandbox mode |
 | `RESEND_API_KEY` | transactional email (verification, alerts, invoices) | 100/day free |
 | `UPSTASH_REDIS_URL` / `UPSTASH_REDIS_TOKEN` | cache + queue | free tier |
 
@@ -154,7 +154,7 @@ correlation on top of log analysis — not in v1 scope, add later as a phase.
   returned in full via any endpoint
 - Full `audit_logs` table — every write action logged with actor, IP, user
   agent, timestamp
-- Stripe webhook signature verification — never trust an unsigned webhook body
+- Razorpay webhook signature verification — never trust an unsigned webhook body
 - `.env` never committed; `.env.example` with every variable name but no
   values, checked into git
 
@@ -273,14 +273,16 @@ create table credits_ledger (
   org_id uuid references organizations(id),
   delta integer not null,       -- +100 top-up, -1 per AI report
   reason text not null,
+  razorpay_payment_id text unique,  -- idempotency key: a retried webhook for
+                                     -- the same payment must not double-credit
   created_at timestamptz default now()
 );
 
 create table subscriptions (
   id uuid primary key default gen_random_uuid(),
   org_id uuid references organizations(id),
-  stripe_customer_id text,
-  stripe_subscription_id text,
+  razorpay_customer_id text,
+  razorpay_subscription_id text,
   plan text not null default 'free',
   status text not null default 'active'
 );
@@ -324,12 +326,19 @@ threat_actors   { org_id, ip, first_seen, last_seen, threat_score, abuseipdb_dat
   report costs 1 credit — deduct via `credits_ledger` insert inside the same
   transaction that generates the report. Ingestion and rule-based detection
   are unmetered (that's the free-tier hook; AI is the paid feature).
-- **Payment:** Stripe Checkout for plan upgrade → webhook
-  (`checkout.session.completed`, `invoice.paid`) → backend verifies signature
-  → tops up `credits_ledger` and updates `subscriptions`. Stripe Customer
-  Portal for self-serve cancel/upgrade — don't build your own billing UI.
+- **Payment:** Razorpay (switched from Stripe — Stripe requires an
+  invite-only account for India, a hard blocker; Razorpay sandbox mode is
+  the replacement, same "test/sandbox only, permanently, no real charges
+  ever" approach, since this is a portfolio project, not a real business).
+  Razorpay Payment Links for credit top-ups (a hosted, shareable checkout
+  URL, closest equivalent to Stripe Checkout Sessions — no custom payment
+  form) → webhook (`payment_link.paid` / `payment.captured`) → backend
+  verifies the `X-Razorpay-Signature` header (HMAC-SHA256 over the raw
+  body) → tops up `credits_ledger` and updates `subscriptions`. No Razorpay
+  equivalent to Stripe's Customer Portal exists — self-serve cancel/upgrade
+  is out of scope until there's an actual subscription product to manage.
 - **Email:** Resend for verification resend, weekly digest of CRITICAL
-  incidents, and Stripe invoice receipts.
+  incidents, and Razorpay payment receipts.
 
 ---
 
@@ -364,7 +373,7 @@ never commit the real `.env`.
 | 3 | Rebuild 4 parsers as async, write to `parsed_events` | Upload sample `auth.log`, count matches known bad-login lines |
 | 4 | Detection engine reading `detection_rules` from Postgres | Feed known brute-force sample, verify CRITICAL alert created |
 | 5 | Enrichment worker (AbuseIPDB/OTX/IPInfo) + Redis cache | Enrich same IP twice, second call is cache hit (check latency/log) |
-| 6 | Stripe test-mode checkout + webhook + credits ledger | Complete Stripe test checkout, confirm credits increment |
+| 6 | Razorpay sandbox-mode checkout + webhook + credits ledger | Complete Razorpay test payment, confirm credits increment |
 | 7 | Resend email (verify + digest) | Trigger signup, confirm email arrives |
 | 8 | React frontend: Login/Signup/Dashboard/Threat Hunting/Incidents | Full login → view dashboard → log out flow in browser |
 | 9 | AI Analyst (OpenAI direct, streaming, credit-metered) | Generate 1 report, confirm credit deducted by 1 |
@@ -384,12 +393,15 @@ MongoDB    → MongoDB Atlas (free M0)
 Postgres   → Supabase (hosted, includes Auth)
 Redis      → Upstash (serverless, free tier)
 Email      → Resend
-Payments   → Stripe (test mode → live mode after phase 6 passes)
+Payments   → Razorpay (sandbox mode — permanently; this project never goes
+                        live with real payments, portfolio project only)
 DNS/WAF    → Cloudflare (optional but recommended in front of Vercel/Render)
 ```
 
-Set `ENVIRONMENT=production` and swap every API key to live mode only after
-phase 11's security pass is complete — not before.
+Set `ENVIRONMENT=production` and swap every other API key to live mode only
+after phase 11's security pass is complete — not before. Razorpay is the one
+exception: it stays in sandbox mode indefinitely, even after "deployment,"
+since there's no real business behind this to accept real payments for.
 
 ---
 

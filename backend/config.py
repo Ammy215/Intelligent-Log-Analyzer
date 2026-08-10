@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     upstash_redis_rest_url: str = ""
     upstash_redis_rest_token: str = ""
 
+    # ── Razorpay (sandbox mode only, permanently — portfolio project, ──
+    # ── never goes live. Switched from Stripe: invite-only for India. ──
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
+
     # ── AI ───────────────────────────────────────────
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"

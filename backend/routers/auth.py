@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
+SIGNUP_BONUS_CREDITS = 20
+
 
 class SignupRequest(BaseModel):
     email: str
@@ -85,6 +87,15 @@ async def signup(body: SignupRequest) -> dict:
             for key, weight in THREAT_WEIGHTS.items()
         ]
         await rest_insert("detection_rules", rule_rows, use_service_role=True)
+
+        # Starting credit allotment — free to try the platform before ever
+        # touching Stripe. Not tied to a Stripe event, so stripe_event_id
+        # stays null on this entry.
+        await rest_insert(
+            "credits_ledger",
+            {"org_id": org_id, "delta": SIGNUP_BONUS_CREDITS, "reason": "signup_bonus"},
+            use_service_role=True,
+        )
     except SupabaseError as e:
         logger.error(f"Org/profile provisioning failed for user {user_id}: {e.detail}")
         raise HTTPException(

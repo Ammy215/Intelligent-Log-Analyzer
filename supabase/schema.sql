@@ -1,7 +1,7 @@
 -- Phase 1: auth/org/role foundation.
 -- See INTELLIGENT_LOG_ANALYZER_ENTERPRISE_REBUILD.md §12-13 for the full target schema.
--- credits_ledger, subscriptions, and a Postgres `incidents` table are Phase 6/billing
--- scope and are intentionally not created here — incidents currently live in MongoDB
+-- Phase 6 adds credits_ledger + subscriptions below. A Postgres `incidents`
+-- table is still not created — incidents live in MongoDB
 -- (backend/models/incident.py) and stay there until a later phase says otherwise.
 
 create extension if not exists "pgcrypto";
@@ -38,6 +38,33 @@ create table audit_logs (
   created_at timestamptz default now()
 );
 
+-- credits_ledger is append-only: current balance = SUM(delta) for an org,
+-- never mutate a past entry to "correct" it — insert an offsetting entry
+-- instead, same as any real accounting ledger.
+--
+-- razorpay_payment_id is nullable (the signup bonus and any other
+-- non-Razorpay entries have none) but unique when present — Razorpay
+-- retries webhook deliveries, and without this, a retried payment_link.paid
+-- event would double-credit the org. A retry hits the unique constraint and
+-- is treated as an idempotent no-op instead of a duplicate top-up.
+create table credits_ledger (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid references organizations(id) on delete cascade,
+  delta integer not null,       -- +100 top-up, -1 per AI report (Phase 9, not wired yet)
+  reason text not null,
+  razorpay_payment_id text unique,
+  created_at timestamptz default now()
+);
+
+create table subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid references organizations(id) on delete cascade,
+  razorpay_customer_id text,
+  razorpay_subscription_id text,
+  plan text not null default 'free',
+  status text not null default 'active'
+);
+
 -- Row Level Security ---------------------------------------------------------
 --
 -- org_id/role are read from the caller's JWT `app_metadata` claim, which only
@@ -55,6 +82,8 @@ alter table organizations enable row level security;
 alter table user_profiles enable row level security;
 alter table detection_rules enable row level security;
 alter table audit_logs enable row level security;
+alter table credits_ledger enable row level security;
+alter table subscriptions enable row level security;
 
 -- organizations: members can read their own org. No INSERT/UPDATE/DELETE
 -- policy exists for regular users — default-deny, provisioning is service-role only.
@@ -100,6 +129,22 @@ create policy "org admins can read own audit logs"
     and (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
   );
 
+-- credits_ledger: org members can read their own ledger (to see balance and
+-- history). No INSERT/UPDATE/DELETE policy for regular users, on purpose —
+-- every entry is either the signup bonus or a webhook-verified Razorpay
+-- top-up, both written server-side via the service role. A ledger that
+-- users could write to directly would let anyone grant themselves credits.
+create policy "org members can read own credits ledger"
+  on credits_ledger for select
+  using (org_id = (auth.jwt() -> 'app_metadata' ->> 'org_id')::uuid);
+
+-- subscriptions: org members can read their own subscription/plan status.
+-- No user-facing write policy — plan changes go through Razorpay Payment
+-- Links + webhook (service role), not a direct table edit.
+create policy "org members can read own subscription"
+  on subscriptions for select
+  using (org_id = (auth.jwt() -> 'app_metadata' ->> 'org_id')::uuid);
+
 -- Data API grants --------------------------------------------------------------
 --
 -- This project was created with "Automatically expose new tables" OFF
@@ -114,4 +159,4 @@ create policy "org admins can read own audit logs"
 -- exposure off, neither role gets either layer for free.
 
 grant usage on schema public to authenticated, service_role;
-grant select, insert, update, delete on organizations, user_profiles, detection_rules, audit_logs to authenticated, service_role;
+grant select, insert, update, delete on organizations, user_profiles, detection_rules, audit_logs, credits_ledger, subscriptions to authenticated, service_role;
