@@ -8,10 +8,11 @@ endpoints get gated with these dependencies starting Phase 2.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from analyzers.threat_scorer import THREAT_WEIGHTS
+from audit import log_action
 from db.supabase import (
     SupabaseError,
     admin_set_app_metadata,
@@ -122,12 +123,37 @@ async def signup(body: SignupRequest) -> dict:
 
 
 @router.post("/login")
-async def login(body: LoginRequest) -> dict:
+async def login(body: LoginRequest, request: Request) -> dict:
     """Exchange email/password for a Supabase access token."""
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
     try:
         result = await auth_login(body.email, body.password)
     except SupabaseError as e:
+        # org_id/actor_id are genuinely unknown for a failed attempt (wrong
+        # password or nonexistent email) — logged with the attempted email
+        # in the action string since audit_logs has no separate detail
+        # column. Rows like this are write-only: org-scoped RLS means no
+        # admin's view will ever surface a null-org_id row, which is
+        # correct — a failed login isn't "this org's" data until we know
+        # which org it was aimed at.
+        await log_action(
+            action=f"auth.login_failed:{body.email}",
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
         raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    user = result.get("user", {})
+    app_metadata = user.get("app_metadata") or {}
+    await log_action(
+        action="auth.login",
+        org_id=app_metadata.get("org_id"),
+        actor_id=user.get("id"),
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
 
     return {
         "status": "success",

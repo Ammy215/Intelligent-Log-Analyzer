@@ -12,6 +12,7 @@ import {
   Shield,
   CreditCard,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { analysisAPI } from '@/lib/api'
@@ -35,6 +36,10 @@ export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+
+  const items = user?.role === 'admin'
+    ? [...navItems, { path: '/admin', label: 'Admin', icon: ShieldCheck }]
+    : navItems
 
   // Get total events count
   const { data: summary } = useQuery({
@@ -63,7 +68,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.path
 

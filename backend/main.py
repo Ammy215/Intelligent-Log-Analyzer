@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import DatabaseManager, create_indexes
-from routers import logs, analysis, incidents, reports, auth, billing
+from routers import logs, analysis, incidents, reports, auth, billing, admin
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
@@ -99,6 +99,7 @@ app.include_router(logs.router)
 app.include_router(analysis.router)
 app.include_router(incidents.router)
 app.include_router(reports.router)
+app.include_router(admin.router)
 
 
 if __name__ == "__main__":

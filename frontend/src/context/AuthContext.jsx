@@ -9,9 +9,13 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const result = await authAPI.login(email, password)
-    const sessionUser = result.user
-    setSession(result.access_token, sessionUser)
-    setUser(sessionUser)
+    // result.user is just {id, email} — role/org_id live in the JWT's
+    // app_metadata claim, not decoded here, so fetch the full profile via
+    // /auth/me (needs the token, so set the session first).
+    setSession(result.access_token, result.user)
+    const me = await authAPI.me()
+    setSession(result.access_token, me)
+    setUser(me)
     return result
   }
 

@@ -237,6 +237,34 @@ export const billingAPI = {
   },
 }
 
+// ============ ADMIN API ============
+export const adminAPI = {
+  listMembers: async () => {
+    const response = await api.get('/admin/members')
+    return response.data
+  },
+
+  listAuditLog: async () => {
+    const response = await api.get('/admin/audit-log')
+    return response.data
+  },
+
+  listDetectionRules: async () => {
+    const response = await api.get('/admin/detection-rules')
+    return response.data
+  },
+
+  updateDetectionRule: async (ruleId, weight) => {
+    const response = await api.patch(`/admin/detection-rules/${ruleId}`, { weight })
+    return response.data
+  },
+
+  getCreditsLedger: async () => {
+    const response = await api.get('/admin/credits-ledger')
+    return response.data
+  },
+}
+
 // ============ HEALTH CHECK ============
 export const healthAPI = {
   // Check API health

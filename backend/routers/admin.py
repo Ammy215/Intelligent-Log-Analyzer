@@ -1,0 +1,140 @@
+"""Admin-only endpoints: org members, audit log, detection rule tuning,
+credits ledger. Every endpoint here is gated by require_role("admin") at
+the API layer — and for the reads/writes that touch tables with their own
+admin-scoped RLS policy (detection_rules, audit_logs), the caller's own
+JWT is used (not the service role) so Postgres enforces the same rule a
+second time. Not just a hidden button in the frontend.
+"""
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+
+from audit import log_action
+from billing.credits import get_org_credits
+from db.supabase import SupabaseError, rest_select, rest_update
+from middleware.auth import CurrentUser
+from middleware.rbac import require_role
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+
+class UpdateRuleWeight(BaseModel):
+    weight: int = Field(ge=0, le=100)
+
+
+@router.get("/members")
+async def list_members(user: CurrentUser = Depends(require_role("admin"))) -> dict:
+    """Org members and their roles."""
+    try:
+        rows = await rest_select(
+            "user_profiles",
+            {"select": "id,full_name,email,role,created_at", "org_id": f"eq.{user.org_id}"},
+            user_token=user.access_token,
+        )
+    except SupabaseError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    return {"status": "success", "count": len(rows), "data": rows}
+
+
+@router.get("/audit-log")
+async def list_audit_log(user: CurrentUser = Depends(require_role("admin"))) -> dict:
+    """Recent audit log entries for this org, newest first."""
+    try:
+        rows = await rest_select(
+            "audit_logs",
+            {
+                "select": "id,actor_id,action,ip_address,user_agent,created_at",
+                "org_id": f"eq.{user.org_id}",
+                "order": "created_at.desc",
+                "limit": "200",
+            },
+            user_token=user.access_token,
+        )
+    except SupabaseError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    return {"status": "success", "count": len(rows), "data": rows}
+
+
+@router.get("/detection-rules")
+async def list_detection_rules(user: CurrentUser = Depends(require_role("admin"))) -> dict:
+    """This org's detection rule weights — the real UI for what was
+    previously only editable via direct DB writes."""
+    try:
+        rows = await rest_select(
+            "detection_rules",
+            {"select": "id,rule_key,weight,enabled", "org_id": f"eq.{user.org_id}", "order": "rule_key.asc"},
+            user_token=user.access_token,
+        )
+    except SupabaseError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    return {"status": "success", "count": len(rows), "data": rows}
+
+
+@router.patch("/detection-rules/{rule_id}")
+async def update_detection_rule(
+    rule_id: str,
+    body: UpdateRuleWeight,
+    request: Request,
+    user: CurrentUser = Depends(require_role("admin")),
+) -> dict:
+    """Update one detection rule's weight. Scoped to the caller's org via
+    RLS (the update uses the caller's own JWT, not the service role) —
+    detection_rules' "org admins can write own detection rules" policy
+    means this can't touch another org's rule even if someone guessed an
+    ID, regardless of what this endpoint's own org_id filter does."""
+    existing = await rest_select(
+        "detection_rules",
+        {"select": "id,rule_key,weight", "id": f"eq.{rule_id}", "org_id": f"eq.{user.org_id}"},
+        user_token=user.access_token,
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Detection rule not found")
+    old_weight = existing[0]["weight"]
+    rule_key = existing[0]["rule_key"]
+
+    try:
+        rows = await rest_update(
+            "detection_rules",
+            {"id": f"eq.{rule_id}", "org_id": f"eq.{user.org_id}"},
+            {"weight": body.weight},
+            user_token=user.access_token,
+        )
+    except SupabaseError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    await log_action(
+        action=f"detection_rules.update:{rule_key}:{old_weight}->{body.weight}",
+        org_id=user.org_id,
+        actor_id=user.id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+
+    return {"status": "success", "data": rows[0] if rows else None}
+
+
+@router.get("/credits-ledger")
+async def credits_ledger(user: CurrentUser = Depends(require_role("admin"))) -> dict:
+    """Current balance breakdown (free vs. purchased) plus the raw
+    purchased-credit ledger history."""
+    try:
+        balance = await get_org_credits(user.org_id, user.access_token)
+        ledger_rows = await rest_select(
+            "credits_ledger",
+            {
+                "select": "id,delta,reason,razorpay_payment_id,created_at",
+                "org_id": f"eq.{user.org_id}",
+                "order": "created_at.desc",
+            },
+            user_token=user.access_token,
+        )
+    except SupabaseError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    return {"status": "success", "balance": balance, "ledger": ledger_rows}
