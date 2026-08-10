@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Activity,
@@ -10,10 +10,13 @@ import {
   FileText,
   Settings,
   Shield,
+  CreditCard,
+  LogOut,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { analysisAPI } from '@/lib/api'
 import { formatNumber } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
 
 const navItems = [
   { path: '/', label: 'Overview', icon: LayoutDashboard },
@@ -23,12 +26,15 @@ const navItems = [
   { path: '/incidents', label: 'Incidents', icon: AlertTriangle },
   { path: '/ai-analyst', label: 'AI Analyst', icon: Brain },
   { path: '/attack-map', label: 'Attack Map', icon: Map },
+  { path: '/billing', label: 'Billing', icon: CreditCard },
   { path: '/reports', label: 'Reports', icon: FileText },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
 
   // Get total events count
   const { data: summary } = useQuery({
@@ -36,6 +42,11 @@ export default function Sidebar() {
     queryFn: analysisAPI.getSummary,
     refetchInterval: 30000, // Refresh every 30s
   })
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
   return (
     <div className="w-60 bg-bg-secondary border-r border-bg-border flex flex-col h-screen fixed left-0 top-0">
@@ -75,12 +86,6 @@ export default function Sidebar() {
 
       {/* Footer stats */}
       <div className="p-4 border-t border-bg-border space-y-3">
-        {/* Connection status */}
-        <div className="flex items-center gap-2 text-sm">
-          <div className="w-2 h-2 rounded-full bg-accent-green animate-pulse" />
-          <span className="text-text-secondary">Connected</span>
-        </div>
-
         {/* Total events */}
         {summary?.total_events !== undefined && (
           <div className="text-sm">
@@ -91,9 +96,18 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Last refresh */}
-        <div className="text-xs text-text-muted">
-          Updated {new Date().toLocaleTimeString()}
+        {/* Signed-in user + logout */}
+        <div className="pt-2 border-t border-bg-border">
+          <p className="text-xs text-text-secondary truncate mb-2" title={user?.email}>
+            {user?.email}
+          </p>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent-red transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
         </div>
       </div>
     </div>

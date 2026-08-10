@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     debug: bool = True
     secret_key: str = "replace_with_random_64_char_string"
-    allowed_origins: str = "http://localhost:8501,http://localhost:3000"
+    allowed_origins: str = "http://localhost:8501,http://localhost:3000,http://localhost:5173"
 
     # ── Threat Intelligence ──────────────────────────
     abuseipdb_api_key: str = ""

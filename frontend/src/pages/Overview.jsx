@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Activity, AlertTriangle, Users, FileWarning } from 'lucide-react'
-import { analysisAPI, logsAPI } from '@/lib/api'
+import { Activity, AlertTriangle, Users, FileWarning, CreditCard } from 'lucide-react'
+import { analysisAPI, logsAPI, incidentsAPI, billingAPI } from '@/lib/api'
 import PageWrapper from '@/components/layout/PageWrapper'
 import MetricCard from '@/components/shared/MetricCard'
 import LoadingState, { LoadingCard } from '@/components/shared/LoadingState'
@@ -34,6 +34,20 @@ export default function Overview() {
     refetchInterval: REFRESH_INTERVALS.OVERVIEW,
   })
 
+  // Fetch open incident count
+  const { data: openIncidents } = useQuery({
+    queryKey: ['incidents-open-count'],
+    queryFn: () => incidentsAPI.listIncidents({ status: 'open' }),
+    refetchInterval: REFRESH_INTERVALS.OVERVIEW,
+  })
+
+  // Fetch credit balance
+  const { data: credits } = useQuery({
+    queryKey: ['billing-credits'],
+    queryFn: billingAPI.getCredits,
+    refetchInterval: REFRESH_INTERVALS.OVERVIEW,
+  })
+
   if (summaryLoading) {
     return (
       <PageWrapper title="Overview" subtitle="Real-time security monitoring dashboard">
@@ -61,38 +75,47 @@ export default function Overview() {
   const uniqueAttackers = summary?.top_sources?.length || 0
   const topSources = summary?.top_sources || []
 
-  // Mock delta values (in production, calculate from historical data)
+  // Delta values aren't computed from historical data yet — omitted (0/neutral)
+  // rather than faked, since there's no trend baseline to compare against.
   const metrics = [
     {
       title: 'Total Events Today',
       value: totalEvents,
       icon: Activity,
       iconColor: COLORS.accent.cyan,
-      delta: 12,
-      deltaType: 'positive',
+      delta: null,
+      deltaType: 'neutral',
     },
     {
       title: 'Critical Alerts',
       value: criticalAlerts,
       icon: AlertTriangle,
       iconColor: COLORS.accent.red,
-      delta: -5,
-      deltaType: 'negative',
+      delta: null,
+      deltaType: 'neutral',
     },
     {
       title: 'Unique Attackers',
       value: uniqueAttackers,
       icon: Users,
       iconColor: COLORS.accent.amber,
-      delta: 8,
-      deltaType: 'positive',
+      delta: null,
+      deltaType: 'neutral',
     },
     {
       title: 'Active Incidents',
-      value: 0, // Will be populated from incidents API
+      value: openIncidents?.total_count ?? 0,
       icon: FileWarning,
       iconColor: COLORS.accent.purple,
-      delta: 0,
+      delta: null,
+      deltaType: 'neutral',
+    },
+    {
+      title: 'Credit Balance',
+      value: credits?.total_available ?? 0,
+      icon: CreditCard,
+      iconColor: COLORS.accent.green,
+      delta: null,
       deltaType: 'neutral',
     },
   ]
@@ -103,7 +126,7 @@ export default function Overview() {
       subtitle="Real-time security monitoring dashboard"
     >
       {/* Metric Cards Row */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-5 gap-6 mb-8">
         {metrics.map((metric, index) => (
           <MetricCard key={metric.title} {...metric} index={index} />
         ))}
