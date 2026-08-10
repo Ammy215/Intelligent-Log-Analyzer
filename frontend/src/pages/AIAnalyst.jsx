@@ -1,18 +1,34 @@
 import { useState } from 'react'
-import { Brain, Send, Loader2 } from 'lucide-react'
-import { useMutation } from '@tanstack/react-query'
-import { reportsAPI } from '@/lib/api'
+import { Brain, Send, Loader2, CreditCard } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { reportsAPI, incidentsAPI, billingAPI } from '@/lib/api'
 import PageWrapper from '@/components/layout/PageWrapper'
 import ReactMarkdown from 'react-markdown'
 
 export default function AIAnalyst() {
-  const [contextType, setContextType] = useState('ip')
+  const queryClient = useQueryClient()
+  const [contextType, setContextType] = useState('incident')
   const [contextValue, setContextValue] = useState('')
   const [messages, setMessages] = useState([])
+  const [errorBanner, setErrorBanner] = useState('')
+
+  const { data: openIncidents } = useQuery({
+    queryKey: ['incidents-for-analyst'],
+    queryFn: () => incidentsAPI.listIncidents({}),
+    enabled: contextType === 'incident',
+  })
+
+  const { data: credits } = useQuery({
+    queryKey: ['billing-credits'],
+    queryFn: billingAPI.getCredits,
+  })
 
   const { mutate: generateReport, isLoading } = useMutation({
     mutationFn: async () => {
-      if (contextType === 'ip') {
+      if (contextType === 'incident') {
+        return reportsAPI.generateIncidentReport(contextValue)
+      } else if (contextType === 'ip') {
         return reportsAPI.generateExecutiveSummary(contextValue)
       } else {
         return reportsAPI.getSummaryStatistics()
@@ -22,22 +38,44 @@ export default function AIAnalyst() {
       const aiMessage = {
         role: 'assistant',
         content:
-          data.executive_summary ||
           data.incident_report ||
+          data.executive_summary ||
           'Analysis completed successfully',
         timestamp: new Date(),
         data: data,
       }
       setMessages((prev) => [...prev, aiMessage])
+      // Metered endpoints report their new balance directly — refetch so
+      // the sidebar/billing page reflect it without a manual reload.
+      if (data.credits) {
+        queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
+        if (data.credits.spent > 0) {
+          toast.success(
+            `1 credit spent (${data.credits.source}) — ${data.credits.total_available} remaining`
+          )
+        }
+      }
+    },
+    onError: (err) => {
+      const detail = err.response?.data?.detail
+      setErrorBanner(typeof detail === 'string' ? detail : 'Report generation failed')
     },
   })
 
   const handleSubmit = () => {
-    if (!contextValue && contextType === 'ip') return
+    if (contextType !== 'stats' && !contextValue) return
+    setErrorBanner('')
+
+    const label =
+      contextType === 'incident'
+        ? `incident "${openIncidents?.data?.find((i) => i.id === contextValue)?.title || contextValue}"`
+        : contextType === 'ip'
+          ? `IP ${contextValue}`
+          : 'system statistics'
 
     const userMessage = {
       role: 'user',
-      content: `Analyze ${contextType === 'ip' ? `IP ${contextValue}` : 'system statistics'}`,
+      content: `Analyze ${label}`,
       timestamp: new Date(),
     }
     setMessages((prev) => [...prev, userMessage])
@@ -53,10 +91,21 @@ export default function AIAnalyst() {
       <div className="grid grid-cols-4 gap-6">
         {/* Context Selector */}
         <div className="col-span-1 card p-6">
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Brain className="w-5 h-5 text-accent-purple" />
-            Analysis Context
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Brain className="w-5 h-5 text-accent-purple" />
+              Analysis Context
+            </h3>
+            {credits && (
+              <div
+                className="flex items-center gap-1 text-xs text-text-secondary"
+                title="Incident reports cost 1 credit each"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                {credits.total_available}
+              </div>
+            )}
+          </div>
 
           <div className="space-y-4">
             <div>
@@ -66,12 +115,40 @@ export default function AIAnalyst() {
               <select
                 className="input w-full"
                 value={contextType}
-                onChange={(e) => setContextType(e.target.value)}
+                onChange={(e) => {
+                  setContextType(e.target.value)
+                  setContextValue('')
+                  setErrorBanner('')
+                }}
               >
+                <option value="incident">Incident (1 credit)</option>
                 <option value="ip">IP Address</option>
                 <option value="stats">System Statistics</option>
               </select>
             </div>
+
+            {contextType === 'incident' && (
+              <div>
+                <label className="text-sm text-text-secondary mb-2 block">
+                  Incident
+                </label>
+                <select
+                  className="input w-full"
+                  value={contextValue}
+                  onChange={(e) => setContextValue(e.target.value)}
+                >
+                  <option value="">Select an incident…</option>
+                  {(openIncidents?.data || []).map((inc) => (
+                    <option key={inc.id} value={inc.id}>
+                      {inc.title} ({inc.severity})
+                    </option>
+                  ))}
+                </select>
+                {openIncidents && openIncidents.data.length === 0 && (
+                  <p className="text-xs text-text-muted mt-1">No incidents yet.</p>
+                )}
+              </div>
+            )}
 
             {contextType === 'ip' && (
               <div>
@@ -88,9 +165,15 @@ export default function AIAnalyst() {
               </div>
             )}
 
+            {errorBanner && (
+              <div className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-lg px-3 py-2">
+                {errorBanner}
+              </div>
+            )}
+
             <button
               onClick={handleSubmit}
-              disabled={isLoading || (contextType === 'ip' && !contextValue)}
+              disabled={isLoading || (contextType !== 'stats' && !contextValue)}
               className="btn btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -109,9 +192,9 @@ export default function AIAnalyst() {
             <div className="text-xs text-text-muted">
               <p className="mb-2">Suggested prompts:</p>
               <ul className="space-y-1">
+                <li>• Generate an incident report (1 credit)</li>
                 <li>• Analyze specific IP behavior</li>
                 <li>• Review system-wide statistics</li>
-                <li>• Generate executive summary</li>
               </ul>
             </div>
           </div>

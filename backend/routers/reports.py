@@ -18,11 +18,13 @@ from database import get_logs_collection, get_incidents_collection
 from middleware.auth import CurrentUser, get_current_user
 from threat_intel.ip_profiler import get_ip_profiler
 from report_generator.ai_client import get_ai_client
+from report_generator.gemini_client import GeminiError, generate_incident_report as gemini_generate_incident_report
 from report_generator.models import (
     ReportMetadata,
     ReportRequest,
     ExecutiveSummary,
 )
+from billing.credits import InsufficientCreditsError, spend_credit
 
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
@@ -71,49 +73,68 @@ async def generate_executive_summary(ip: str, user: CurrentUser = Depends(get_cu
 
 @router.post("/incident/{incident_id}")
 async def generate_incident_report(incident_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
-    """Generate detailed incident report.
-    
-    Args:
-        incident_id: MongoDB ObjectId of incident
-        
-    Returns:
-        Full incident report with timeline and recommendations
-        
-    Learning: Converting database records to narrative reports
+    """Generate an AI incident report from real incident data (Gemini SDK,
+    direct call — no LangChain). Credit-metered: 1 credit per report,
+    checked BEFORE generation and only deducted AFTER Gemini actually
+    succeeds, so a failed call is never charged. This is the only
+    credit-gated endpoint in the app — every other feature stays free.
+
+    The generated report is persisted onto the incident document's
+    ai_report field, so Incidents.jsx's detail view shows it on future
+    loads without regenerating (and re-spending a credit).
     """
+    from bson.objectid import ObjectId
+
+    incidents_collection = await get_incidents_collection()
+    incident = await incidents_collection.find_one({"_id": ObjectId(incident_id), "org_id": user.org_id})
+
+    if not incident:
+        raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
+
+    from billing.credits import get_org_credits
+
+    balance = await get_org_credits(user.org_id, user.access_token)
+    if balance["total_available"] < 1:
+        raise HTTPException(
+            status_code=402,
+            detail="Out of credits — you have 0 free and 0 purchased credits remaining. Buy more credits to continue.",
+        )
+
     try:
-        from bson.objectid import ObjectId
-        
-        incidents_collection = await get_incidents_collection()
-        
-        # Fetch incident from database
-        incident = await incidents_collection.find_one({"_id": ObjectId(incident_id), "org_id": user.org_id})
-        
-        if not incident:
-            raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
-        
-        # Generate AI report
-        ai_client = get_ai_client()
-        report_text = await ai_client.generate_incident_report(incident)
-        
-        return {
-            "status": "success",
-            "incident_id": incident_id,
-            "report_type": "incident",
-            "generated_at": datetime.now().isoformat(),
-            "incident_data": {
-                "title": incident.get("title"),
-                "description": incident.get("description"),
-                "severity": incident.get("severity"),
-                "status": incident.get("status"),
-                "source_ips": incident.get("source_ips", []),
-                "event_types": incident.get("event_types", [])
-            },
-            "incident_report": report_text
-        }
-    
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Report generation failed: {str(e)}")
+        report_text = await gemini_generate_incident_report(incident)
+    except GeminiError as e:
+        raise HTTPException(status_code=502, detail=f"Report generation failed, no credit charged: {e.detail}")
+
+    try:
+        spend_result = await spend_credit(user.org_id, user.access_token, reason="ai_analyst_incident_report")
+    except InsufficientCreditsError:
+        # Balance changed between the check above and now (race) — the
+        # report was already generated, but we still refuse to charge past
+        # zero. Report is returned anyway since generation already happened
+        # and cost real API usage; the credit gate protects future calls.
+        spend_result = {"spent": 0, "source": None, **balance}
+
+    await incidents_collection.update_one(
+        {"_id": ObjectId(incident_id), "org_id": user.org_id},
+        {"$set": {"ai_report": report_text}},
+    )
+
+    return {
+        "status": "success",
+        "incident_id": incident_id,
+        "report_type": "incident",
+        "generated_at": datetime.now().isoformat(),
+        "incident_data": {
+            "title": incident.get("title"),
+            "description": incident.get("description"),
+            "severity": incident.get("severity"),
+            "status": incident.get("status"),
+            "source_ips": incident.get("source_ips", []),
+            "event_types": incident.get("event_types", [])
+        },
+        "incident_report": report_text,
+        "credits": spend_result,
+    }
 
 
 @router.post("/remediation")

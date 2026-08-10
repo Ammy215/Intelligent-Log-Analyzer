@@ -48,8 +48,13 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
 
     # ── AI ───────────────────────────────────────────
+    # Switched from OpenAI to Gemini: no permanent free tier on OpenAI,
+    # Gemini's free tier needs no card on file — matters for a portfolio
+    # project meant to stay free to run indefinitely.
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-flash-latest"
     max_tokens: int = 2000
 
     # ── Supabase (Auth + Postgres) ─────────────────────

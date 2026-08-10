@@ -12,11 +12,20 @@ credits don't roll over. Purchased credits are never touched by this.
 import logging
 from datetime import datetime, timezone
 
-from db.supabase import rest_select, rest_update
+from db.supabase import rest_insert, rest_select, rest_update
 
 logger = logging.getLogger(__name__)
 
 FREE_CREDITS_PER_MONTH = 20
+
+
+class InsufficientCreditsError(Exception):
+    """Raised when an org has 0 credits in both pools. Callers should catch
+    this BEFORE doing any expensive work (an LLM call) — never after."""
+
+    def __init__(self, org_id: str):
+        self.org_id = org_id
+        super().__init__(f"Org {org_id} has no credits remaining")
 
 
 def _current_period() -> str:
@@ -67,4 +76,49 @@ async def get_org_credits(org_id: str, user_token: str) -> dict:
         "free_credits_remaining": free_remaining,
         "purchased_credits": purchased_credits,
         "total_available": free_remaining + purchased_credits,
+    }
+
+
+async def spend_credit(org_id: str, user_token: str, reason: str) -> dict:
+    """Deduct exactly 1 credit for a metered action (currently: AI Analyst
+    incident reports). Spends the free monthly allowance first, purchased
+    credits (credits_ledger) second — same two-pool priority as the
+    balance-check logic above. Raises InsufficientCreditsError up front,
+    before the caller does any expensive work (an LLM call) — callers must
+    check credits BEFORE generating, and only call this AFTER the work
+    actually succeeds, so a failed generation is never charged.
+    """
+    balance = await get_org_credits(org_id, user_token)  # also runs the lazy monthly reset
+
+    if balance["total_available"] < 1:
+        raise InsufficientCreditsError(org_id)
+
+    if balance["free_credits_remaining"] >= 1:
+        source = "free"
+        new_free = balance["free_credits_remaining"] - 1
+        await rest_update(
+            "organizations",
+            {"id": f"eq.{org_id}"},
+            {"free_credits_remaining": new_free},
+            use_service_role=True,
+        )
+        new_purchased = balance["purchased_credits"]
+    else:
+        source = "purchased"
+        await rest_insert(
+            "credits_ledger",
+            {"org_id": org_id, "delta": -1, "reason": reason},
+            use_service_role=True,
+        )
+        new_free = balance["free_credits_remaining"]
+        new_purchased = balance["purchased_credits"] - 1
+
+    logger.info(f"Spent 1 credit for org {org_id} ({reason}), source={source}")
+
+    return {
+        "spent": 1,
+        "source": source,
+        "free_credits_remaining": new_free,
+        "purchased_credits": new_purchased,
+        "total_available": new_free + new_purchased,
     }

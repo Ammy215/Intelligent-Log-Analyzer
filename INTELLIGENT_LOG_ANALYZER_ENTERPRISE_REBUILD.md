@@ -52,7 +52,7 @@ spec. Everything below is the target architecture to audit against.
                                                    │
                                                    ▼
                                         ┌──────────────────┐
-                                        │  AI Analyst        │  OpenAI direct SDK,
+                                        │  AI Analyst        │  Gemini direct SDK,
                                         │  (credit-metered)  │  streaming, per-org quota
                                         └──────────────────┘
                                                    │
@@ -99,7 +99,7 @@ instance, so there's nothing to install).
 | `ABUSEIPDB_API_KEY` | IP reputation | 1000/day |
 | `OTX_API_KEY` | threat pulses | free |
 | `IPINFO_TOKEN` | geolocation | 50k/month |
-| `OPENAI_API_KEY` | AI analyst | pay-as-you-go |
+| `GEMINI_API_KEY` | AI analyst | free tier (switched from OpenAI — no permanent free/sandbox tier there, Gemini has a genuine free tier with no card required) |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` | billing | free to integrate, sandbox mode |
 | `RESEND_API_KEY` | transactional email (verification, alerts, invoices) | 100/day free |
 | `UPSTASH_REDIS_URL` / `UPSTASH_REDIS_TOKEN` | cache + queue | free tier |
@@ -115,10 +115,13 @@ correlation on top of log analysis — not in v1 scope, add later as a phase.
 - Streamlit multi-page dashboard entirely — replaced by React frontend
 - Hardcoded `THREAT_WEIGHTS` dict — move to a `detection_rules` Postgres table so
   weights are tunable per-org without a redeploy
-- **Decided: LangChain is out.** AI Analyst calls the OpenAI SDK directly —
-  it's one prompt in, one streamed response out, no agent chains or tool
-  routing involved, so LangChain was pure overhead. Revisit only if a later
-  project needs real multi-step tool-calling across several data sources.
+- **Decided: LangChain is out.** AI Analyst calls the Gemini SDK directly
+  (switched from OpenAI — no permanent free tier there, Gemini's is
+  genuinely free with no card on file, which matters for a portfolio
+  project) — it's one prompt in, one response out, no agent chains or tool
+  routing involved, so LangChain was pure overhead either way. Revisit
+  only if a later project needs real multi-step tool-calling across
+  several data sources.
 - Synchronous `requests` calls anywhere in the FastAPI app — everything must be
   `httpx.AsyncClient`, or one blocking enrichment call stalls the whole worker
 
@@ -144,7 +147,7 @@ correlation on top of log analysis — not in v1 scope, add later as a phase.
 - Rate limiting: auth 10/15min, ingest 60/min, AI analyst 5/min (it's the
   expensive one), global 200/15min — via Redis counters
 - Every external API call validated and sanitized before it leaves your
-  backend; **never call AbuseIPDB/OTX/OpenAI from the React frontend**
+  backend; **never call AbuseIPDB/OTX/Gemini from the React frontend**
 - Log content is attacker-controlled input — sanitize before storage/display
   (no raw HTML render of log lines; strip control chars; cap line length) to
   prevent stored XSS and log-injection-of-log-injection
@@ -376,7 +379,7 @@ never commit the real `.env`.
 | 6 | Razorpay sandbox-mode checkout + webhook + credits ledger | Complete Razorpay test payment, confirm credits increment |
 | 7 | Resend email (verify + digest) | Trigger signup, confirm email arrives |
 | 8 | React frontend: Login/Signup/Dashboard/Threat Hunting/Incidents | Full login → view dashboard → log out flow in browser |
-| 9 | AI Analyst (OpenAI direct, streaming, credit-metered) | Generate 1 report, confirm credit deducted by 1 |
+| 9 | AI Analyst (Gemini direct, credit-metered) | Generate 1 report, confirm credit deducted by 1 |
 | 10 | Admin panel (users, roles, audit log viewer, billing overview) | Suspend a test user, confirm they can't log in |
 | 11 | Security pass: rate limits, RLS verification, audit log coverage check | Attempt cross-org data access, confirm 403 |
 | 12 | Deploy | See §15 |
