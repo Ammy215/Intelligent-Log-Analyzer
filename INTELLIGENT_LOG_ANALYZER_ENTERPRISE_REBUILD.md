@@ -391,4 +391,41 @@ DNS/WAF    → Cloudflare (optional but recommended in front of Vercel/Render)
 Set `ENVIRONMENT=production` and swap every API key to live mode only after
 phase 11's security pass is complete — not before.
 
+---
+
+## Future Phase: Upgrade to enterprise_threat_engine.py
+
+**Not scheduled into the phase 0–11 sequence above.** This is a flagged
+future improvement, not a numbered phase — it gets tackled only once the
+rest of the build (enrichment through deployment) is done and stable, so
+the scoring engine never gets swapped out from under a live app with real
+org data and real tuned weights.
+
+**Current state (as of Phase 4):** `threat_scorer.py` is the canonical
+detection engine — that was Phase 4's decision. It's wired into every
+current caller: `routers/logs.py` directly (log ingestion scoring), and
+`routers/analysis.py` / `routers/reports.py` indirectly via
+`threat_intel/ip_profiler.py`. It reads its weights from the org-scoped
+`detection_rules` Postgres table (`get_org_weights()`), falling back to
+the hardcoded `THREAT_WEIGHTS` dict if an org has no rules configured or
+the fetch fails.
+
+**Why revisit it:** `enterprise_threat_engine.py` already exists in the
+codebase — unused, dead code — but it's meaningfully more sophisticated
+than `threat_scorer.py`: async, and MITRE ATT&CK-mapped, versus
+`threat_scorer.py`'s simple weighted-dict scoring. It represents a real
+upgrade path, just one deliberately not taken during Phase 4.
+
+**Scope when this phase actually happens:**
+- Migrate every current caller of `threat_scorer.py` (`logs.py`,
+  `analysis.py`, `reports.py` via `ip_profiler.py`) to
+  `enterprise_threat_engine.py` instead.
+- Decide how MITRE ATT&CK mapping interacts with the existing per-org
+  `detection_rules` table — does each rule need a technique ID added?
+  Does the schema need a migration, or can technique mapping live
+  alongside the existing `rule_key`/`weight` columns?
+- Full regression test against a known fixture set (e.g. the sample logs
+  in `sample_logs/`, with their expected scores recorded beforehand) to
+  confirm scoring behavior doesn't silently change in ways that break
+  existing orgs' already-tuned weights.
 
