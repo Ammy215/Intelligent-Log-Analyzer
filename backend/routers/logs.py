@@ -17,9 +17,11 @@ from database import get_logs_collection
 from middleware.auth import CurrentUser, get_current_user
 from models.log_entry import LogEntry
 from parsers.ssh_parser import SSHParser
+from parsers.windows_event_parser import WindowsEventParser
 
 router = APIRouter(prefix="/api/v1/logs", tags=["logs"])
 ssh_parser = SSHParser()
+windows_event_parser = WindowsEventParser()
 
 
 @router.post("/upload")
@@ -29,8 +31,9 @@ async def upload_log_file(
 ) -> dict:
     """Upload a raw log file for parsing.
 
-    Supports .log, .txt, and other text-based log files.
-    Attempts to detect format and parse accordingly.
+    Supports .log/.txt SSH-format text files and binary .evtx (Windows
+    Event Log) files. Text files default to the SSH parser — proper
+    format auto-detection across formats is still a TODO.
 
     Args:
         file: Upload file containing raw logs
@@ -40,20 +43,28 @@ async def upload_log_file(
     """
     try:
         from analyzers.threat_scorer import calculate_threat_score
-        
-        contents = await file.read()
-        text = contents.decode("utf-8")
-        lines = text.strip().split("\n")
 
-        # For Phase 1, use SSH parser as default
-        # In Phase 2, implement format detection logic
-        parsed_logs = ssh_parser.parse_batch(lines)
+        contents = await file.read()
+        filename = (file.filename or "").lower()
+
+        if filename.endswith(".evtx"):
+            # Binary format — extract per-record XML strings first, no text decode
+            records = WindowsEventParser.extract_records_from_evtx_bytes(contents)
+            parsed_logs = windows_event_parser.parse_batch(records)
+            total_lines = len(records)
+        else:
+            # For Phase 1, use SSH parser as default
+            # In Phase 2, implement format detection logic
+            text = contents.decode("utf-8")
+            lines = text.strip().split("\n")
+            parsed_logs = ssh_parser.parse_batch(lines)
+            total_lines = len(lines)
 
         if not parsed_logs:
             return {
                 "status": "warning",
                 "message": "File uploaded but no logs could be parsed",
-                "total_lines": len(lines),
+                "total_lines": total_lines,
                 "parsed_count": 0,
             }
 
@@ -75,7 +86,7 @@ async def upload_log_file(
         return {
             "status": "success",
             "message": f"Successfully parsed and stored logs",
-            "total_lines": len(lines),
+            "total_lines": total_lines,
             "parsed_count": len(parsed_logs),
             "inserted_ids": [str(id) for id in insert_result.inserted_ids],
         }
