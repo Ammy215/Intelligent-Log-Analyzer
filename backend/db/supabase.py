@@ -110,6 +110,29 @@ async def admin_set_app_metadata(user_id: str, app_metadata: dict) -> dict:
     return resp.json()
 
 
+async def generate_action_link(email: str, link_type: str = "magiclink") -> dict:
+    """Admin API: generate a Supabase Auth action link without sending
+    Supabase's own email for it — we own delivery via Resend instead.
+
+    Using type="magiclink" rather than "signup": generate_link's "signup"
+    type expects a password (it's meant for provisioning a brand-new user
+    in one step), which a "resend verification" flow for an already-signed-up
+    user doesn't have. A magic link works for any existing user regardless of
+    confirmation state, and clicking it confirms the email as a side effect
+    of signing the user in — the practical outcome a "resend verification"
+    button needs.
+    """
+    resp = await _request(
+        "POST",
+        f"{settings.supabase_url}/auth/v1/admin/generate_link",
+        headers=_service_headers(),
+        json={"type": link_type, "email": email},
+    )
+    if resp.status_code >= 400:
+        raise SupabaseError(resp.status_code, resp.text)
+    return resp.json()
+
+
 async def rest_insert(
     table: str, data: Union[dict, list[dict]], use_service_role: bool = False, user_token: Optional[str] = None
 ) -> list:
@@ -133,12 +156,21 @@ async def rest_insert(
     return resp.json()
 
 
-async def rest_select(table: str, params: dict, user_token: str) -> list:
-    """Select rows via PostgREST using the caller's own JWT, so RLS applies."""
+async def rest_select(
+    table: str, params: dict, user_token: Optional[str] = None, use_service_role: bool = False
+) -> list:
+    """Select rows via PostgREST.
+
+    Defaults to the caller's own JWT, so RLS applies. Pass use_service_role=True
+    for server-triggered lookups with no user in the request context (e.g. a
+    payment webhook resolving which org admins to email) — RLS is bypassed,
+    same trust boundary as rest_insert/rest_update's service-role path.
+    """
+    headers = _service_headers() if use_service_role else _user_headers(user_token)
     resp = await _request(
         "GET",
         f"{settings.supabase_url}/rest/v1/{table}",
-        headers=_user_headers(user_token),
+        headers=headers,
         params=params,
     )
     if resp.status_code >= 400:

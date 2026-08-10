@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from bson.objectid import ObjectId
-from fastapi import APIRouter, Depends, Query, HTTPException, Body
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Body
 
 from database import (
     get_logs_collection,
@@ -19,6 +19,7 @@ from database import (
 )
 from middleware.auth import CurrentUser, get_current_user
 from models.incident import Incident, ThreatActor
+from notifications.triggers import notify_critical_incident
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
 
@@ -139,6 +140,7 @@ async def get_incident(incident_id: str, user: CurrentUser = Depends(get_current
 
 @router.post("/detect")
 async def detect_incidents(
+    background_tasks: BackgroundTasks,
     time_window_minutes: int = Query(60, ge=5, le=1440),
     user: CurrentUser = Depends(get_current_user),
 ) -> dict:
@@ -233,7 +235,17 @@ async def detect_incidents(
             }
 
             result = await incidents_collection.insert_one(incident_data)
-            detected_incidents.append(str(result.inserted_id))
+            incident_id = str(result.inserted_id)
+            detected_incidents.append(incident_id)
+
+            if severity == "CRITICAL":
+                background_tasks.add_task(
+                    notify_critical_incident,
+                    user.org_id,
+                    incident_id,
+                    incident_data["title"],
+                    incident_data["description"],
+                )
 
         return {
             "status": "success",

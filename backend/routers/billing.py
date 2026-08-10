@@ -13,7 +13,7 @@ permanently (portfolio project, no real payments ever).
 """
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 
 from billing.credits import get_org_credits
 from billing.razorpay_client import RazorpayError, create_payment_link, verify_webhook_signature
@@ -21,6 +21,7 @@ from config import settings
 from db.supabase import SupabaseError, rest_insert
 from middleware.auth import CurrentUser, get_current_user
 from middleware.rbac import require_role
+from notifications.triggers import notify_payment_confirmation
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ async def checkout(user: CurrentUser = Depends(require_role("admin"))) -> dict:
 
 
 @router.post("/webhook")
-async def razorpay_webhook(request: Request) -> dict:
+async def razorpay_webhook(request: Request, background_tasks: BackgroundTasks) -> dict:
     """Razorpay calls this directly — no JWT, verified by signature instead.
 
     The raw request body is read and verified BEFORE any JSON parsing or
@@ -112,6 +113,7 @@ async def razorpay_webhook(request: Request) -> dict:
                 use_service_role=True,
             )
             logger.info(f"Credited {CREDITS_PER_TOPUP} credits to org {org_id} for payment {payment_id}")
+            background_tasks.add_task(notify_payment_confirmation, org_id, CREDITS_PER_TOPUP, TOPUP_AMOUNT_INR)
         except SupabaseError as e:
             # 409 = unique constraint on razorpay_payment_id already hit, i.e.
             # Razorpay retried a delivery we already processed. Idempotent

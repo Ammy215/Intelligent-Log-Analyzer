@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
 
+    # ── Resend (transactional email, sandbox sender only) ─────
+    resend_api_key: str = ""
+
     # ── AI ───────────────────────────────────────────
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"

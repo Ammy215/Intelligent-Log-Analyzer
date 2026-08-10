@@ -18,11 +18,13 @@ from db.supabase import (
     auth_login,
     auth_logout,
     auth_signup,
+    generate_action_link,
     rest_insert,
     rest_select,
 )
 from middleware.auth import CurrentUser, get_current_user
 from middleware.rbac import require_role
+from notifications.resend_client import ResendError, send_email
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,10 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str
 
 
 @router.post("/signup")
@@ -70,6 +76,7 @@ async def signup(body: SignupRequest) -> dict:
                 "id": user_id,
                 "org_id": org_id,
                 "full_name": body.full_name,
+                "email": body.email,
                 "role": "admin",
             },
             use_service_role=True,
@@ -142,6 +149,46 @@ async def logout(user: CurrentUser = Depends(get_current_user)) -> dict:
     except SupabaseError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     return {"status": "success", "message": "Logged out"}
+
+
+@router.post("/resend-verification")
+async def resend_verification(body: ResendVerificationRequest) -> dict:
+    """Resend an account-verification email, sent via Resend rather than
+    Supabase's own built-in delivery (Supabase still sends its own email at
+    signup time — this is only the resend path).
+
+    Unauthenticated on purpose (the caller isn't logged in yet, that's the
+    whole reason they need this), so it always returns the same generic
+    response regardless of whether the email exists — otherwise this
+    endpoint would let anyone enumerate registered accounts.
+    """
+    generic_response = {
+        "status": "success",
+        "message": "If that email is registered, a verification link has been sent.",
+    }
+    try:
+        link_result = await generate_action_link(body.email)
+    except SupabaseError as e:
+        logger.warning(f"generate_action_link failed for resend-verification ({body.email}): {e.detail}")
+        return generic_response
+
+    action_link = link_result.get("action_link") or link_result.get("properties", {}).get("action_link")
+    if not action_link:
+        logger.error(f"generate_action_link returned no action_link, raw response: {link_result}")
+        return generic_response
+
+    try:
+        await send_email(
+            body.email,
+            "Verify your account",
+            f"<p>Click the link below to verify your account and sign in:</p>"
+            f'<p><a href="{action_link}">{action_link}</a></p>',
+        )
+    except ResendError as e:
+        logger.error(f"Resend send failed for resend-verification ({body.email}): {e}")
+        raise HTTPException(status_code=502, detail="Could not send verification email — try again shortly")
+
+    return generic_response
 
 
 @router.get("/me")

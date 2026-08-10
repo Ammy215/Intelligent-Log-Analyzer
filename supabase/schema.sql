@@ -24,10 +24,15 @@ create table organizations (
   created_at timestamptz default now()
 );
 
+-- email is denormalized from auth.users here (populated at signup) so
+-- Phase 7 notification triggers (payment confirmation, CRITICAL incident
+-- alert) can look up "org admins' emails" with a plain org-scoped select
+-- instead of an extra Supabase Admin API round trip per email sent.
 create table user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   org_id uuid references organizations(id) on delete cascade,
   full_name text,
+  email text,
   role text not null default 'viewer' check (role in ('admin', 'analyst', 'viewer')),
   created_at timestamptz default now()
 );
