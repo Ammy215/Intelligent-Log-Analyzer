@@ -28,8 +28,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-SIGNUP_BONUS_CREDITS = 20
-
 
 class SignupRequest(BaseModel):
     email: str
@@ -88,14 +86,12 @@ async def signup(body: SignupRequest) -> dict:
         ]
         await rest_insert("detection_rules", rule_rows, use_service_role=True)
 
-        # Starting credit allotment — free to try the platform before ever
-        # touching Stripe. Not tied to a Stripe event, so stripe_event_id
-        # stays null on this entry.
-        await rest_insert(
-            "credits_ledger",
-            {"org_id": org_id, "delta": SIGNUP_BONUS_CREDITS, "reason": "signup_bonus"},
-            use_service_role=True,
-        )
+        # No credits_ledger insert here on purpose — the starting free
+        # allotment now lives entirely in organizations.free_credits_remaining
+        # (defaults to 20 at the DB level) and refreshes monthly via lazy
+        # reset (billing/credits.py). credits_ledger is purchased-only
+        # (Razorpay top-ups); a signup_bonus ledger row would double-count
+        # against the new free-tier column.
     except SupabaseError as e:
         logger.error(f"Org/profile provisioning failed for user {user_id}: {e.detail}")
         raise HTTPException(

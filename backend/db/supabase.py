@@ -144,3 +144,25 @@ async def rest_select(table: str, params: dict, user_token: str) -> list:
     if resp.status_code >= 400:
         raise SupabaseError(resp.status_code, resp.text)
     return resp.json()
+
+
+async def rest_update(
+    table: str, filters: dict, data: dict, use_service_role: bool = False, user_token: Optional[str] = None
+) -> list:
+    """Update rows matching filters via PostgREST (e.g. {"id": "eq.<uuid>"}).
+
+    Service role is required for tables with no user-facing write policy
+    (e.g. organizations, where every write is system-triggered).
+    """
+    headers = _service_headers() if use_service_role else _user_headers(user_token)
+    headers["Prefer"] = "return=representation"
+    resp = await _request(
+        "PATCH",
+        f"{settings.supabase_url}/rest/v1/{table}",
+        headers=headers,
+        params=filters,
+        json=data,
+    )
+    if resp.status_code >= 400:
+        raise SupabaseError(resp.status_code, resp.text)
+    return resp.json()

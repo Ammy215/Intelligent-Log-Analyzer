@@ -1,7 +1,11 @@
-"""Billing endpoints: Razorpay Payment Link creation + webhook handler.
+"""Billing endpoints: Razorpay Payment Link creation + webhook handler +
+credit balance check.
 
-Credits are earned here (signup bonus in routers/auth.py, top-ups here) —
-spending them is Phase 9 (AI Analyst), not wired in yet.
+Two separate credit pools: the free monthly allowance (organizations.
+free_credits_remaining, lazily reset — see billing/credits.py) and
+purchased credits (credits_ledger, Razorpay top-ups only, earned via the
+/checkout + /webhook flow below). Spending either is Phase 9 (AI Analyst),
+not wired in yet.
 
 Switched from Stripe to Razorpay — Stripe requires an invite-only account
 for India. Razorpay sandbox mode is the replacement, and stays sandbox-only
@@ -11,10 +15,11 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from billing.credits import get_org_credits
 from billing.razorpay_client import RazorpayError, create_payment_link, verify_webhook_signature
 from config import settings
 from db.supabase import SupabaseError, rest_insert
-from middleware.auth import CurrentUser
+from middleware.auth import CurrentUser, get_current_user
 from middleware.rbac import require_role
 
 logger = logging.getLogger(__name__)
@@ -27,6 +32,19 @@ TOPUP_AMOUNT_INR = 500   # whole rupees; arbitrary sandbox-mode price, never a r
 # No real frontend exists yet (Phase 8) — this is a placeholder Razorpay
 # redirects the browser to after payment.
 CALLBACK_URL = "http://localhost:5173/billing/callback"
+
+
+@router.get("/credits")
+async def credits(user: CurrentUser = Depends(get_current_user)) -> dict:
+    """Current credit balance for the caller's org — also the lazy-reset
+    trigger point for the monthly free tier. Any org member can check
+    their own balance, not just admins.
+    """
+    try:
+        result = await get_org_credits(user.org_id, user.access_token)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"status": "success", **result}
 
 
 @router.post("/checkout")

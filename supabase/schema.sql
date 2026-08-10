@@ -6,9 +6,21 @@
 
 create extension if not exists "pgcrypto";
 
+-- credits_current_period / free_credits_remaining implement a lazy-reset
+-- monthly free tier, separate from purchased credits (credits_ledger).
+-- There's no scheduled job resetting every org at month boundaries —
+-- whichever balance check happens to run first after a new month starts
+-- notices the stored period is stale and resets right then
+-- (backend/billing/credits.py). No rollover: a stale reset always sets
+-- free_credits_remaining to exactly 20, never adds to whatever was left.
+-- credits_current_period starts null so a brand-new org's first balance
+-- check naturally triggers initialization through the same code path,
+-- rather than needing special-cased logic at signup.
 create table organizations (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  credits_current_period text,
+  free_credits_remaining integer not null default 20,
   created_at timestamptz default now()
 );
 
