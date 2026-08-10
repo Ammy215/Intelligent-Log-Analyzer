@@ -33,7 +33,8 @@ class IPProfiler:
         self,
         ip: str,
         local_threat_factors: Optional[List[str]] = None,
-        event_count: Optional[int] = None
+        event_count: Optional[int] = None,
+        weights: Optional[Dict[str, int]] = None,
     ) -> Dict:
         """Create comprehensive threat profile for an IP.
         
@@ -88,7 +89,7 @@ class IPProfiler:
             logger.info(f"Profiling IP {ip} from multiple sources...")
             
             results = await asyncio.gather(
-                self._get_local_analysis(ip, local_threat_factors, event_count),
+                self._get_local_analysis(ip, local_threat_factors, event_count, weights),
                 self.abuseipdb.check_ip(ip),
                 self.otx.get_ip_reputation(ip),
                 self.geoip.get_geolocation(ip),
@@ -142,15 +143,16 @@ class IPProfiler:
         self,
         ip: str,
         threat_factors: List[str],
-        event_count: Optional[int]
+        event_count: Optional[int],
+        weights: Optional[Dict[str, int]] = None,
     ) -> Dict:
         """Get local threat analysis for IP.
-        
+
         Learning: Async wrapper for synchronous functions
         """
         try:
             # Call sync threat scoring function (it's I/O free)
-            threat_score_result = calculate_threat_score(threat_factors)
+            threat_score_result = calculate_threat_score(threat_factors, weights)
             
             # Boost score if we have many events from this IP
             if event_count and event_count > 10:

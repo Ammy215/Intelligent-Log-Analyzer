@@ -42,7 +42,7 @@ async def upload_log_file(
         Dictionary with upload results and parsed count
     """
     try:
-        from analyzers.threat_scorer import calculate_threat_score
+        from analyzers.threat_scorer import calculate_threat_score, get_org_weights
 
         contents = await file.read()
         filename = (file.filename or "").lower()
@@ -68,11 +68,13 @@ async def upload_log_file(
                 "parsed_count": 0,
             }
 
-        # Calculate threat scores for each log before insertion
+        # Calculate threat scores for each log before insertion — fetch this
+        # org's weights once for the whole batch, not once per line
+        weights = await get_org_weights(user.org_id, user.access_token)
         for log in parsed_logs:
             log.org_id = user.org_id
             if log.tags:
-                threat_result = calculate_threat_score(log.tags)
+                threat_result = calculate_threat_score(log.tags, weights)
                 log.threat_score = threat_result['score']
                 if not log.severity or log.severity == "LOW":
                     log.severity = threat_result['severity']
@@ -109,14 +111,15 @@ async def ingest_single_log(
         Dictionary with insert result and ID
     """
     try:
-        from analyzers.threat_scorer import calculate_threat_score
+        from analyzers.threat_scorer import calculate_threat_score, get_org_weights
 
         logs_collection = await get_logs_collection()
         log_entry.org_id = user.org_id
 
         # Calculate threat score if tags are present
         if log_entry.tags:
-            threat_result = calculate_threat_score(log_entry.tags)
+            weights = await get_org_weights(user.org_id, user.access_token)
+            threat_result = calculate_threat_score(log_entry.tags, weights)
             log_entry.threat_score = threat_result['score']
             if not log_entry.severity or log_entry.severity == "LOW":
                 log_entry.severity = threat_result['severity']

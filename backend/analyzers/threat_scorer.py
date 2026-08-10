@@ -3,7 +3,17 @@
 Implements weighted scoring (0-100) based on attack patterns, event types,
 and threat intelligence signals. Returns severity verdict and contributing factors.
 """
+import logging
+from typing import Optional
 
+from db.supabase import rest_select
+
+logger = logging.getLogger(__name__)
+
+# Fallback weights used when an org has no configured detection_rules (or
+# the Postgres fetch fails) — every org gets its own copy of these seeded
+# into detection_rules at signup (see routers/auth.py), so this dict is a
+# safety net, not the primary source of truth going forward.
 THREAT_WEIGHTS = {
     # Login/auth attacks
     "failed_login_1_to_5": 5,
@@ -47,19 +57,44 @@ SEVERITY_LABELS = {
 }
 
 
-def calculate_threat_score(factors: list[str]) -> dict:
+async def get_org_weights(org_id: str, user_token: str) -> dict[str, int]:
+    """Fetch this org's detection rule weights from Postgres.
+
+    Falls back to the hardcoded THREAT_WEIGHTS defaults if the org has no
+    enabled rules or the fetch fails, so a Postgres hiccup never blocks log
+    ingestion or scoring — it just temporarily loses per-org tuning.
+    """
+    try:
+        rows = await rest_select(
+            "detection_rules",
+            {"select": "rule_key,weight", "org_id": f"eq.{org_id}", "enabled": "eq.true"},
+            user_token=user_token,
+        )
+        if not rows:
+            return THREAT_WEIGHTS
+        return {row["rule_key"]: row["weight"] for row in rows}
+    except Exception as e:
+        logger.warning(f"Failed to fetch detection_rules for org {org_id}, falling back to defaults: {e}")
+        return THREAT_WEIGHTS
+
+
+def calculate_threat_score(factors: list[str], weights: Optional[dict[str, int]] = None) -> dict:
     """Calculate threat score from a list of contributing factors.
 
     Args:
         factors: List of threat factor keys
+        weights: Org-specific weights from get_org_weights(). Falls back to
+            the hardcoded THREAT_WEIGHTS defaults if not provided or empty.
 
     Returns:
         Dictionary with score (0-100), severity label, and contributing factors
     """
+    active_weights = weights if weights else THREAT_WEIGHTS
+
     score = 0
     for factor in factors:
-        if factor in THREAT_WEIGHTS:
-            score += THREAT_WEIGHTS[factor]
+        if factor in active_weights:
+            score += active_weights[factor]
 
     # Cap at 100
     score = min(score, 100)
@@ -75,7 +110,7 @@ def calculate_threat_score(factors: list[str]) -> dict:
         "score": score,
         "severity": severity,
         "factors": factors,
-        "contributing_weights": {f: THREAT_WEIGHTS.get(f, 0) for f in factors},
+        "contributing_weights": {f: active_weights.get(f, 0) for f in factors},
     }
 
 

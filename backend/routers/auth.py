@@ -11,6 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from analyzers.threat_scorer import THREAT_WEIGHTS
 from db.supabase import (
     SupabaseError,
     admin_set_app_metadata,
@@ -75,6 +76,15 @@ async def signup(body: SignupRequest) -> dict:
         )
 
         await admin_set_app_metadata(user_id, {"org_id": org_id, "role": "admin"})
+
+        # Seed this org's own copy of today's default detection weights, so
+        # scoring is fully tunable per-org from day one instead of an
+        # unconfigured org silently depending on the hardcoded fallback.
+        rule_rows = [
+            {"org_id": org_id, "rule_key": key, "weight": weight, "enabled": True}
+            for key, weight in THREAT_WEIGHTS.items()
+        ]
+        await rest_insert("detection_rules", rule_rows, use_service_role=True)
     except SupabaseError as e:
         logger.error(f"Org/profile provisioning failed for user {user_id}: {e.detail}")
         raise HTTPException(

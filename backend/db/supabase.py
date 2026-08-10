@@ -5,7 +5,7 @@ Uses raw httpx calls instead of the supabase-py SDK: no new dependency
 visible here rather than hidden inside a client library.
 """
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import httpx
 
@@ -110,8 +110,10 @@ async def admin_set_app_metadata(user_id: str, app_metadata: dict) -> dict:
     return resp.json()
 
 
-async def rest_insert(table: str, data: dict, use_service_role: bool = False, user_token: Optional[str] = None) -> list:
-    """Insert a row via PostgREST.
+async def rest_insert(
+    table: str, data: Union[dict, list[dict]], use_service_role: bool = False, user_token: Optional[str] = None
+) -> list:
+    """Insert one row (dict) or many rows in one request (list of dicts) via PostgREST.
 
     Provisioning inserts (org/profile creation at signup) must use the
     service role, since a brand-new user has no org_id yet to satisfy any

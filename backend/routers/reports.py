@@ -13,6 +13,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from analyzers.threat_scorer import get_org_weights
 from database import get_logs_collection, get_incidents_collection
 from middleware.auth import CurrentUser, get_current_user
 from threat_intel.ip_profiler import get_ip_profiler
@@ -42,7 +43,8 @@ async def generate_executive_summary(ip: str, user: CurrentUser = Depends(get_cu
     try:
         # Get threat profile for this IP
         profiler = get_ip_profiler()
-        threat_profile = await profiler.profile_ip(ip)
+        weights = await get_org_weights(user.org_id, user.access_token)
+        threat_profile = await profiler.profile_ip(ip, weights=weights)
         
         if threat_profile.get("error"):
             raise HTTPException(status_code=404, detail=f"IP {ip} not found or analysis failed")

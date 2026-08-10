@@ -15,7 +15,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, Query, HTTPException
 
 from database import get_logs_collection, get_threat_actors_collection
-from analyzers.threat_scorer import calculate_threat_score, get_threat_verdict
+from analyzers.threat_scorer import calculate_threat_score, get_org_weights, get_threat_verdict
 from middleware.auth import CurrentUser, get_current_user
 from threat_intel.ip_profiler import get_ip_profiler
 
@@ -412,10 +412,12 @@ async def analyze_ip_profile(ip: str, user: CurrentUser = Depends(get_current_us
         threat_factors = df["tags"].explode().unique().tolist() if "tags" in df.columns else []
         threat_factors = [t for t in threat_factors if t]  # Remove None values
         
+        weights = await get_org_weights(user.org_id, user.access_token)
         threat_profile = await profiler.profile_ip(
             ip,
             local_threat_factors=threat_factors,
-            event_count=len(events)
+            event_count=len(events),
+            weights=weights,
         )
 
         return {
