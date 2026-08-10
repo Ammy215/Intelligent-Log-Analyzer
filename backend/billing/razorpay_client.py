@@ -12,12 +12,11 @@ replacement, and stays sandbox-only permanently (portfolio project, no
 real payments ever), unlike the original Stripe plan which intended to go
 live after Phase 11.
 
-NOTE: the exact webhook payload shape below (payment_link.paid structure,
-field names) is built from Razorpay's documented API but has not yet been
-verified against a real webhook delivery — that verification happens once
-real sandbox credentials and a real payment are available, same as every
-other external integration in this project was confirmed against the real
-API before being trusted.
+The webhook payload shape below (payment_link.paid structure, field
+names) was verified against a real webhook delivery in Phase 6: a real
+sandbox payment through a real Razorpay Payment Link, delivered to this
+backend via ngrok, signature verified, and credits_ledger correctly
+topped up from the actual payload — not just built from documentation.
 """
 import hashlib
 import hmac
