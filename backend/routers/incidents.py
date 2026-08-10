@@ -45,8 +45,8 @@ async def list_incidents(
     try:
         incidents_collection = await get_incidents_collection()
 
-        # Build filter
-        filter_dict = {}
+        # Build filter — org_id always applied, never optional
+        filter_dict = {"org_id": user.org_id}
         if severity:
             filter_dict["severity"] = severity
         if status:
@@ -108,7 +108,7 @@ async def get_incident(incident_id: str, user: CurrentUser = Depends(get_current
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid incident ID format")
 
-        incident = await incidents_collection.find_one({"_id": obj_id})
+        incident = await incidents_collection.find_one({"_id": obj_id, "org_id": user.org_id})
 
         if not incident:
             raise HTTPException(status_code=404, detail="Incident not found")
@@ -159,10 +159,11 @@ async def detect_incidents(
         logs_collection = await get_logs_collection()
         incidents_collection = await get_incidents_collection()
 
-        # Get high-severity events from last 24 hours
+        # Get high-severity events from last 24 hours, scoped to caller's org
         cutoff_time = datetime.utcnow() - timedelta(hours=24)
         high_severity_events = await logs_collection.find(
             {
+                "org_id": user.org_id,
                 "timestamp": {"$gte": cutoff_time},
                 "severity": {"$in": ["HIGH", "CRITICAL"]},
             }
@@ -216,6 +217,7 @@ async def detect_incidents(
 
             # Create incident
             incident_data = {
+                "org_id": user.org_id,
                 "title": f"Attack from {ip}",
                 "description": f"Coordinated attack with {len(events)} events including: {', '.join(set(event_types))}",
                 "severity": severity,
@@ -273,7 +275,7 @@ async def update_incident_status(
             raise HTTPException(status_code=400, detail="Invalid incident ID format")
 
         result = await incidents_collection.update_one(
-            {"_id": obj_id},
+            {"_id": obj_id, "org_id": user.org_id},
             {
                 "$set": {
                     "status": new_status,

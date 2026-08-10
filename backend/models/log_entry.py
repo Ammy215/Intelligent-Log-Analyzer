@@ -37,6 +37,7 @@ class LogEntry(BaseModel):
     """
 
     id: Optional[str] = Field(None, alias="_id")
+    org_id: Optional[str] = None
     timestamp: datetime
     source_ip: str
     destination_ip: str

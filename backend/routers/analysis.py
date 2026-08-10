@@ -31,9 +31,10 @@ async def get_analysis_summary(user: CurrentUser = Depends(get_current_user)) ->
     """
     try:
         logs_collection = await get_logs_collection()
+        org_match = {"org_id": user.org_id}
 
         # Count total events
-        total_count = await logs_collection.count_documents({})
+        total_count = await logs_collection.count_documents(org_match)
 
         if total_count == 0:
             return {
@@ -48,6 +49,7 @@ async def get_analysis_summary(user: CurrentUser = Depends(get_current_user)) ->
         # Aggregate by severity
         severity_agg = await logs_collection.aggregate(
             [
+                {"$match": org_match},
                 {"$group": {"_id": "$severity", "count": {"$sum": 1}}},
             ]
         ).to_list(None)
@@ -57,6 +59,7 @@ async def get_analysis_summary(user: CurrentUser = Depends(get_current_user)) ->
         # Aggregate by event type
         event_agg = await logs_collection.aggregate(
             [
+                {"$match": org_match},
                 {"$group": {"_id": "$event_type", "count": {"$sum": 1}}},
                 {"$sort": {"count": -1}},
                 {"$limit": 10},
@@ -68,6 +71,7 @@ async def get_analysis_summary(user: CurrentUser = Depends(get_current_user)) ->
         # Top source IPs
         top_ips_agg = await logs_collection.aggregate(
             [
+                {"$match": org_match},
                 {"$group": {"_id": "$source_ip", "count": {"$sum": 1}}},
                 {"$sort": {"count": -1}},
                 {"$limit": 5},
@@ -77,7 +81,7 @@ async def get_analysis_summary(user: CurrentUser = Depends(get_current_user)) ->
         top_sources = [{"ip": item["_id"], "count": item["count"]} for item in top_ips_agg]
 
         # Count critical events
-        critical_count = await logs_collection.count_documents({"severity": "CRITICAL"})
+        critical_count = await logs_collection.count_documents({**org_match, "severity": "CRITICAL"})
 
         return {
             "status": "success",
@@ -111,6 +115,7 @@ async def get_top_attackers(
         # Aggregate logs by source IP
         top_ips = await logs_collection.aggregate(
             [
+                {"$match": {"org_id": user.org_id}},
                 {
                     "$group": {
                         "_id": "$source_ip",
@@ -194,7 +199,7 @@ async def get_attack_timeline(
 
         timeline = await logs_collection.aggregate(
             [
-                {"$match": {"timestamp": {"$gte": start_date}}},
+                {"$match": {"org_id": user.org_id, "timestamp": {"$gte": start_date}}},
                 {
                     "$group": {
                         "_id": group_expr,
@@ -255,7 +260,7 @@ async def get_event_type_distribution(user: CurrentUser = Depends(get_current_us
     try:
         logs_collection = await get_logs_collection()
 
-        total = await logs_collection.count_documents({})
+        total = await logs_collection.count_documents({"org_id": user.org_id})
         if total == 0:
             return {
                 "status": "success",
@@ -265,6 +270,7 @@ async def get_event_type_distribution(user: CurrentUser = Depends(get_current_us
 
         distribution = await logs_collection.aggregate(
             [
+                {"$match": {"org_id": user.org_id}},
                 {
                     "$group": {
                         "_id": "$event_type",
@@ -307,6 +313,7 @@ async def get_attack_heatmap(user: CurrentUser = Depends(get_current_user)) -> d
         # Group by hour and day of week
         heatmap_data = await logs_collection.aggregate(
             [
+                {"$match": {"org_id": user.org_id}},
                 {
                     "$group": {
                         "_id": {
@@ -359,8 +366,8 @@ async def analyze_ip_profile(ip: str, user: CurrentUser = Depends(get_current_us
     try:
         logs_collection = await get_logs_collection()
 
-        # Get all events from this IP
-        events = await logs_collection.find({"source_ip": ip}).to_list(None)
+        # Get all events from this IP, scoped to the caller's org
+        events = await logs_collection.find({"source_ip": ip, "org_id": user.org_id}).to_list(None)
 
         if not events:
             return {

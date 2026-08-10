@@ -85,7 +85,7 @@ async def generate_incident_report(incident_id: str, user: CurrentUser = Depends
         incidents_collection = await get_incidents_collection()
         
         # Fetch incident from database
-        incident = await incidents_collection.find_one({"_id": ObjectId(incident_id)})
+        incident = await incidents_collection.find_one({"_id": ObjectId(incident_id), "org_id": user.org_id})
         
         if not incident:
             raise HTTPException(status_code=404, detail=f"Incident {incident_id} not found")
@@ -163,25 +163,29 @@ async def generate_summary_statistics(user: CurrentUser = Depends(get_current_us
     """
     try:
         logs_collection = await get_logs_collection()
-        
+        org_match = {"org_id": user.org_id}
+
         # Get statistics
-        total_events = await logs_collection.count_documents({})
-        
+        total_events = await logs_collection.count_documents(org_match)
+
         # Get severity breakdown
         severity_stats = await logs_collection.aggregate([
+            {"$match": org_match},
             {"$group": {"_id": "$severity", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}}
         ]).to_list(None)
-        
+
         # Get top IPs
         top_ips = await logs_collection.aggregate([
+            {"$match": org_match},
             {"$group": {"_id": "$source_ip", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 5}
         ]).to_list(None)
-        
+
         # Get event type distribution
         event_types = await logs_collection.aggregate([
+            {"$match": org_match},
             {"$group": {"_id": "$event_type", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}}
         ]).to_list(None)

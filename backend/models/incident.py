@@ -32,6 +32,7 @@ class Incident(BaseModel):
     """Grouped attack campaign or incident."""
 
     id: Optional[str] = Field(None, alias="_id")
+    org_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     severity: str  # LOW, MEDIUM, HIGH, CRITICAL

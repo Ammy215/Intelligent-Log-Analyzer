@@ -59,6 +59,7 @@ async def upload_log_file(
 
         # Calculate threat scores for each log before insertion
         for log in parsed_logs:
+            log.org_id = user.org_id
             if log.tags:
                 threat_result = calculate_threat_score(log.tags)
                 log.threat_score = threat_result['score']
@@ -98,8 +99,9 @@ async def ingest_single_log(
     """
     try:
         from analyzers.threat_scorer import calculate_threat_score
-        
+
         logs_collection = await get_logs_collection()
+        log_entry.org_id = user.org_id
 
         # Calculate threat score if tags are present
         if log_entry.tags:
@@ -151,8 +153,9 @@ async def get_logs(
     try:
         logs_collection = await get_logs_collection()
 
-        # Build filter query
-        filters = {}
+        # Build filter query — org_id is always applied, never optional,
+        # so one org's logs can never appear in another org's results.
+        filters = {"org_id": user.org_id}
         if source_ip:
             filters["source_ip"] = source_ip
         if severity:
@@ -224,7 +227,9 @@ async def get_log_by_id(log_id: str, user: CurrentUser = Depends(get_current_use
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid log ID format")
 
-        log = await logs_collection.find_one({"_id": obj_id})
+        # org_id in the same query, not a separate check after the fact —
+        # a valid ID belonging to another org must 404, not 200 with their data.
+        log = await logs_collection.find_one({"_id": obj_id, "org_id": user.org_id})
 
         if not log:
             raise HTTPException(status_code=404, detail="Log not found")
@@ -261,7 +266,7 @@ async def delete_log(log_id: str, user: CurrentUser = Depends(get_current_user))
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid log ID format")
 
-        result = await logs_collection.delete_one({"_id": obj_id})
+        result = await logs_collection.delete_one({"_id": obj_id, "org_id": user.org_id})
 
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Log not found")
