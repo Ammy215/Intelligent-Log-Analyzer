@@ -33,9 +33,6 @@ class Settings(BaseSettings):
     abuseipdb_api_key: str = ""
     otx_api_key: str = ""
 
-    # ── Geolocation ──────────────────────────────────
-    ipgeo_api_key: str = ""
-
     # ── AI ───────────────────────────────────────────
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
@@ -76,6 +73,11 @@ class Settings(BaseSettings):
         env_file = _ENV_FILE
         env_file_encoding = "utf-8"
         case_sensitive = False
+        # Undeclared .env vars are ignored rather than crashing startup —
+        # otherwise adding a key to .env ahead of the code that reads it
+        # (e.g. prepping credentials for a not-yet-built phase) takes the
+        # whole app down until Settings catches up.
+        extra = "ignore"
 
 
 # Global settings instance
