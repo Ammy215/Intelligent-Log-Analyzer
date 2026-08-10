@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from database import DatabaseManager, create_indexes
-from routers import logs, analysis, incidents, reports
+from routers import logs, analysis, incidents, reports, auth
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
@@ -93,6 +93,7 @@ async def health_check() -> dict:
 
 
 # Register routers
+app.include_router(auth.router)
 app.include_router(logs.router)
 app.include_router(analysis.router)
 app.include_router(incidents.router)

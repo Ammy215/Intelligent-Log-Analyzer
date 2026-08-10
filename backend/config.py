@@ -3,8 +3,16 @@
 Loads all environment variables from .env file and provides
 typed, validated configuration throughout the application.
 """
+from pathlib import Path
+
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
+
+# Repo root's .env, resolved from this file's location rather than the
+# process's working directory — uvicorn is always launched with `backend/`
+# as cwd, so a plain relative ".env" here would look for backend/.env
+# (which doesn't exist) and silently fall back to every field's default.
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -33,6 +41,14 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     max_tokens: int = 2000
 
+    # ── Supabase (Auth + Postgres) ─────────────────────
+    # No JWT secret here on purpose: this project signs tokens with
+    # asymmetric keys (ES256), verified via a public JWKS endpoint
+    # (backend/middleware/auth.py) — there's no shared secret to hold.
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_key: str = ""
+
     # ── Dashboard ────────────────────────────────────
     streamlit_server_port: int = 8501
     api_base_url: str = "http://localhost:8000/api/v1"
@@ -57,7 +73,7 @@ class Settings(BaseSettings):
     class Config:
         """Pydantic config for settings."""
 
-        env_file = ".env"
+        env_file = _ENV_FILE
         env_file_encoding = "utf-8"
         case_sensitive = False
 
