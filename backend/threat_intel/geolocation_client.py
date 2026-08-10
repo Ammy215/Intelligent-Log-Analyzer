@@ -1,109 +1,115 @@
-"""GeoIP geolocation enrichment for IP addresses.
+"""IPInfo geolocation enrichment for IP addresses.
 
 Provides geographic context for malicious IPs including country, city,
 coordinates, and organization information.
 
 Learning: External API integration, JSON parsing, optional database fallback.
 """
-import aiohttp
 import logging
 from typing import Dict, Optional
 
-from threat_intel.cache import cached_threat_intel
+import httpx
 
+from config import settings
+from threat_intel.redis_cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
+CACHE_TTL_SECONDS = 86400  # 24 hours
+
 
 class GeoIPClient:
-    """Async GeoIP client for IP geolocation enrichment."""
+    """Async IPInfo client for IP geolocation enrichment."""
 
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize GeoIP client.
-        
-        Args:
-            api_key: Optional API key for premium services (not required for free tier)
-        
-        Learning: Optional external API keys for upgrade paths
-        """
-        self.api_key = api_key
-        self.base_url = "https://ip-api.com/json"
-        # Free tier allows 45 requests/minute
-        self.rate_limit_delay = 0.02  # 50ms to stay under rate limit
+        """Initialize IPInfo client.
 
-    @cached_threat_intel(ttl_seconds=2592000)  # 30 days for geolocation (changes slowly)
+        Args:
+            api_key: IPInfo token from environment or parameter. IPInfo's
+                free tier works with or without a token (lower rate limit
+                without one), so this degrades gracefully either way.
+        """
+        self.api_key = api_key or settings.ipinfo_token
+        self.base_url = "https://ipinfo.io"
+
     async def get_geolocation(self, ip: str) -> Dict:
-        """Get geolocation data for an IP address.
-        
+        """Get geolocation data for an IP address, via cache if available.
+
         Args:
             ip: IP address to geolocate
-            
+
         Returns:
             {
-                "country": "United States",
-                "country_code": "US",
-                "region": "California", 
-                "city": "Los Angeles",
-                "latitude": 34.0522,
-                "longitude": -118.2437,
-                "timezone": "America/Los_Angeles",
-                "isp": "Example ISP",
-                "organization": "Example Org",
-                "status": "success|fail"
+                "ip": str,
+                "country": str,        # 2-letter code, e.g. "US" (IPInfo doesn't provide a full name)
+                "country_code": str,
+                "region": str,
+                "city": str,
+                "latitude": float,
+                "longitude": float,
+                "timezone": str,
+                "isp": str,            # IPInfo's "org" field (ASN + org name combined)
+                "organization": str,
+                "status": "success|failed"
             }
-        
-        Learning: Async HTTP requests with aiohttp, error handling, data normalization
         """
+        cache_key = f"ipinfo:{ip}"
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            logger.info(f"IPInfo cache hit for {ip}")
+            return cached
+
+        logger.info(f"IPInfo cache miss for {ip}, calling live API")
+        result = await self._fetch_live(ip)
+        if result.get("status") == "success":
+            await cache_set(cache_key, result, CACHE_TTL_SECONDS)
+        return result
+
+    async def _fetch_live(self, ip: str) -> Dict:
         try:
-            async with aiohttp.ClientSession() as session:
-                # Construct request with optional API key
-                params = {
-                    "query": ip,
-                    "fields": "status,country,countryCode,region,city,lat,lon,timezone,isp,org",
-                }
-                
-                async with session.get(
-                    self.base_url,
-                    params=params,
-                    timeout=aiohttp.ClientTimeout(total=5)
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        
-                        # Normalize response format
-                        if data.get("status") == "success":
-                            return {
-                                "ip": ip,
-                                "country": data.get("country"),
-                                "country_code": data.get("countryCode"),
-                                "region": data.get("region"),
-                                "city": data.get("city"),
-                                "latitude": data.get("lat"),
-                                "longitude": data.get("lon"),
-                                "timezone": data.get("timezone"),
-                                "isp": data.get("isp"),
-                                "organization": data.get("org"),
-                                "status": "success"
-                            }
-                        else:
-                            return {
-                                "ip": ip,
-                                "status": "failed",
-                                "error": data.get("message", "Unknown error")
-                            }
-                    else:
-                        logger.warning(f"GeoIP API returned status {response.status} for {ip}")
-                        return {
-                            "ip": ip,
-                            "status": "failed",
-                            "error": f"HTTP {response.status}"
-                        }
-                        
-        except asyncio.TimeoutError:
-            logger.error(f"GeoIP API timeout for {ip}")
-            return {"ip": ip, "status": "failed", "error": "Request timeout"}
+            params = {}
+            if self.api_key and self.api_key != "your_key_here":
+                params["token"] = self.api_key
+
+            async with httpx.AsyncClient(timeout=5) as client:
+                resp = await client.get(f"{self.base_url}/{ip}/json", params=params)
+
+            if resp.status_code != 200:
+                logger.warning(f"IPInfo returned {resp.status_code} for {ip}")
+                return {"ip": ip, "status": "failed", "error": f"HTTP {resp.status_code}"}
+
+            data = resp.json()
+            if data.get("bogon"):
+                # Private/reserved IP (RFC1918 etc.) — no geolocation exists for these
+                return {"ip": ip, "status": "failed", "error": "Bogon/private IP, not geolocatable"}
+
+            lat, lon = None, None
+            if data.get("loc"):
+                try:
+                    lat_str, lon_str = data["loc"].split(",")
+                    lat, lon = float(lat_str), float(lon_str)
+                except (ValueError, AttributeError):
+                    pass
+
+            return {
+                "ip": ip,
+                "country": data.get("country"),
+                "country_code": data.get("country"),
+                "region": data.get("region"),
+                "city": data.get("city"),
+                "latitude": lat,
+                "longitude": lon,
+                "timezone": data.get("timezone"),
+                "isp": data.get("org"),
+                "organization": data.get("org"),
+                "status": "success",
+            }
+
+        except httpx.RequestError as e:
+            logger.error(f"IPInfo request error for {ip}: {e}")
+            return {"ip": ip, "status": "failed", "error": str(e)}
         except Exception as e:
-            logger.error(f"GeoIP API error for {ip}: {str(e)}")
+            logger.error(f"IPInfo error for {ip}: {e}")
             return {"ip": ip, "status": "failed", "error": str(e)}
 
 
@@ -112,7 +118,7 @@ _geoip_client: Optional[GeoIPClient] = None
 
 
 def get_geoip_client(api_key: Optional[str] = None) -> GeoIPClient:
-    """Get or create global GeoIP client instance."""
+    """Get or create global IPInfo client instance."""
     global _geoip_client
     if _geoip_client is None:
         _geoip_client = GeoIPClient(api_key)

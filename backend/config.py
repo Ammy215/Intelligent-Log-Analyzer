@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # ── Threat Intelligence ──────────────────────────
     abuseipdb_api_key: str = ""
     otx_api_key: str = ""
+    ipinfo_token: str = ""
+
+    # ── Redis (Upstash REST) ──────────────────────────
+    upstash_redis_rest_url: str = ""
+    upstash_redis_rest_token: str = ""
 
     # ── AI ───────────────────────────────────────────
     openai_api_key: str = ""

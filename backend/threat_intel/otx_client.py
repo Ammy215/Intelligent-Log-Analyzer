@@ -10,11 +10,13 @@ import asyncio
 import logging
 from typing import Dict, Optional, List
 
-from threat_intel.cache import cached_threat_intel
+from threat_intel.redis_cache import cache_get, cache_set
 from config import settings
 
 
 logger = logging.getLogger(__name__)
+
+CACHE_TTL_SECONDS = 86400  # 24 hours
 
 
 class OTXClient:
@@ -38,13 +40,12 @@ class OTXClient:
         if self.api_key and self.api_key != "your_key_here":
             self.headers["X-OTX-API-KEY"] = self.api_key
 
-    @cached_threat_intel(ttl_seconds=604800)  # 7 days
     async def get_ip_reputation(self, ip: str) -> Dict:
-        """Get IP reputation and threat data from OTX.
-        
+        """Get IP reputation and threat data from OTX, via cache if available.
+
         Args:
             ip: IP address to check
-            
+
         Returns:
             {
                 "ip": str,
@@ -55,7 +56,22 @@ class OTXClient:
                 "recent_threats": [str],     # List of recent threat categories
                 "status": "success|failed"
             }
-        
+        """
+        cache_key = f"otx:{ip}"
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            logger.info(f"OTX cache hit for {ip}")
+            return cached
+
+        logger.info(f"OTX cache miss for {ip}, calling live API")
+        result = await self._fetch_live(ip)
+        if result.get("status") == "success":
+            await cache_set(cache_key, result, CACHE_TTL_SECONDS)
+        return result
+
+    async def _fetch_live(self, ip: str) -> Dict:
+        """Actual OTX API calls, uncached. Called by get_ip_reputation() on a cache miss.
+
         Learning: Multi-endpoint API calls, data aggregation from multiple sources
         """
         try:

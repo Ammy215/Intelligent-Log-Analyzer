@@ -10,7 +10,7 @@ This router handles:
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile, Query, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, File, UploadFile, Query, HTTPException
 from bson import ObjectId
 
 from database import get_logs_collection
@@ -18,14 +18,18 @@ from middleware.auth import CurrentUser, get_current_user
 from models.log_entry import LogEntry
 from parsers.ssh_parser import SSHParser
 from parsers.windows_event_parser import WindowsEventParser
+from threat_intel.enrichment import enrich_and_persist_ip
 
 router = APIRouter(prefix="/api/v1/logs", tags=["logs"])
 ssh_parser = SSHParser()
 windows_event_parser = WindowsEventParser()
 
+FLAGGED_SEVERITIES = {"HIGH", "CRITICAL"}
+
 
 @router.post("/upload")
 async def upload_log_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user: CurrentUser = Depends(get_current_user),
 ) -> dict:
@@ -34,6 +38,10 @@ async def upload_log_file(
     Supports .log/.txt SSH-format text files and binary .evtx (Windows
     Event Log) files. Text files default to the SSH parser — proper
     format auto-detection across formats is still a TODO.
+
+    Any log that scores HIGH/CRITICAL severity gets its source IP enriched
+    (AbuseIPDB/OTX/IPInfo) as a background task after the response is sent
+    — ingestion never waits on external API calls.
 
     Args:
         file: Upload file containing raw logs
@@ -85,12 +93,19 @@ async def upload_log_file(
             [log.model_dump(by_alias=True, exclude_none=True) for log in parsed_logs]
         )
 
+        # Enrich flagged IPs in the background — deduped, so one repeated
+        # bad IP across many lines in this batch only fires one job
+        flagged_ips = {log.source_ip for log in parsed_logs if log.severity in FLAGGED_SEVERITIES}
+        for ip in flagged_ips:
+            background_tasks.add_task(enrich_and_persist_ip, ip)
+
         return {
             "status": "success",
             "message": f"Successfully parsed and stored logs",
             "total_lines": total_lines,
             "parsed_count": len(parsed_logs),
             "inserted_ids": [str(id) for id in insert_result.inserted_ids],
+            "enrichment_queued_for": list(flagged_ips),
         }
 
     except Exception as e:
@@ -99,10 +114,14 @@ async def upload_log_file(
 
 @router.post("/ingest")
 async def ingest_single_log(
+    background_tasks: BackgroundTasks,
     log_entry: LogEntry,
     user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """Ingest a single structured log entry as JSON.
+
+    If this entry scores HIGH/CRITICAL severity, its source IP gets enriched
+    (AbuseIPDB/OTX/IPInfo) as a background task after the response is sent.
 
     Args:
         log_entry: Pydantic LogEntry model from request body
@@ -128,6 +147,9 @@ async def ingest_single_log(
         log_dict = log_entry.model_dump(by_alias=True, exclude_none=True)
 
         result = await logs_collection.insert_one(log_dict)
+
+        if log_entry.severity in FLAGGED_SEVERITIES:
+            background_tasks.add_task(enrich_and_persist_ip, log_entry.source_ip)
 
         return {
             "status": "success",

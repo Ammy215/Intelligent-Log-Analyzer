@@ -10,11 +10,13 @@ import asyncio
 import logging
 from typing import Dict, Optional
 
-from threat_intel.cache import cached_threat_intel
+from threat_intel.redis_cache import cache_get, cache_set
 from config import settings
 
 
 logger = logging.getLogger(__name__)
+
+CACHE_TTL_SECONDS = 86400  # 24 hours — protects AbuseIPDB's daily request limit
 
 
 class AbuseIPDBClient:
@@ -40,14 +42,13 @@ class AbuseIPDBClient:
         }
         self.rate_limit_delay = 1.0  # Conservative delay for free tier
 
-    @cached_threat_intel(ttl_seconds=604800)  # 7 days - abuse history changes slowly
     async def check_ip(self, ip: str, max_age_days: int = 90) -> Dict:
-        """Check IP reputation on AbuseIPDB.
-        
+        """Check IP reputation on AbuseIPDB, via cache if available.
+
         Args:
             ip: IP address to check
             max_age_days: Only return reports from last N days (1-365)
-            
+
         Returns:
             {
                 "ip": str,
@@ -59,7 +60,22 @@ class AbuseIPDBClient:
                 "is_whitelisted": bool,
                 "status": "success|failed|no_key"
             }
-        
+        """
+        cache_key = f"abuseipdb:{ip}"
+        cached = await cache_get(cache_key)
+        if cached is not None:
+            logger.info(f"AbuseIPDB cache hit for {ip}")
+            return cached
+
+        logger.info(f"AbuseIPDB cache miss for {ip}, calling live API")
+        result = await self._fetch_live(ip, max_age_days)
+        if result.get("status") == "success":
+            await cache_set(cache_key, result, CACHE_TTL_SECONDS)
+        return result
+
+    async def _fetch_live(self, ip: str, max_age_days: int) -> Dict:
+        """Actual AbuseIPDB API call, uncached. Called by check_ip() on a cache miss.
+
         Learning: Optional API integration (gracefully handles missing credentials),
                  error handling for API limits, data transformation.
         """

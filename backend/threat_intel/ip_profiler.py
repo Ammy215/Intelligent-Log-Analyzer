@@ -226,9 +226,10 @@ class IPProfiler:
 
         # GeoLocation context (5% weight)
         if geo and geo.get("status") == "success":
-            # Only add weight if location is suspicious (e.g., not common)
+            # Only add weight if location is suspicious (e.g., not common).
+            # IPInfo returns 2-letter country codes (e.g. "US"), not full names.
             country = geo.get("country", "")
-            if country and country not in ["United States", "Canada"]:  # Example filter
+            if country and country not in ["US", "CA"]:  # Example filter
                 scores.append(20)  # Low score for unknown location
                 weights.append(0.05)
                 risk_factors.append(f"Unusual location: {country}")
