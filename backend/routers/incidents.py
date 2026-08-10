@@ -10,13 +10,14 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from bson.objectid import ObjectId
-from fastapi import APIRouter, Query, HTTPException, Body
+from fastapi import APIRouter, Depends, Query, HTTPException, Body
 
 from database import (
     get_logs_collection,
     get_incidents_collection,
     get_threat_actors_collection,
 )
+from middleware.auth import CurrentUser, get_current_user
 from models.incident import Incident, ThreatActor
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
@@ -28,6 +29,7 @@ async def list_incidents(
     status: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
     skip: int = Query(0, ge=0),
+    user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """List incidents with optional filters.
 
@@ -89,7 +91,7 @@ async def list_incidents(
 
 
 @router.get("/{incident_id}")
-async def get_incident(incident_id: str) -> dict:
+async def get_incident(incident_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
     """Get single incident with full details.
 
     Args:
@@ -136,7 +138,10 @@ async def get_incident(incident_id: str) -> dict:
 
 
 @router.post("/detect")
-async def detect_incidents(time_window_minutes: int = Query(60, ge=5, le=1440)) -> dict:
+async def detect_incidents(
+    time_window_minutes: int = Query(60, ge=5, le=1440),
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
     """Auto-detect incidents by grouping related attacks.
 
     Groups attacks by:
@@ -242,6 +247,7 @@ async def detect_incidents(time_window_minutes: int = Query(60, ge=5, le=1440)) 
 async def update_incident_status(
     incident_id: str,
     new_status: str = Body(..., embed=True),
+    user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """Update incident status.
 

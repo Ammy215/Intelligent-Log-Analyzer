@@ -11,9 +11,10 @@ Learning: API design for LLM integration, async operations, response formatting.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from database import get_logs_collection, get_incidents_collection
+from middleware.auth import CurrentUser, get_current_user
 from threat_intel.ip_profiler import get_ip_profiler
 from report_generator.ai_client import get_ai_client
 from report_generator.models import (
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 
 @router.post("/executive/{ip}")
-async def generate_executive_summary(ip: str) -> dict:
+async def generate_executive_summary(ip: str, user: CurrentUser = Depends(get_current_user)) -> dict:
     """Generate executive summary for an IP address.
     
     Args:
@@ -67,7 +68,7 @@ async def generate_executive_summary(ip: str) -> dict:
 
 
 @router.post("/incident/{incident_id}")
-async def generate_incident_report(incident_id: str) -> dict:
+async def generate_incident_report(incident_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
     """Generate detailed incident report.
     
     Args:
@@ -116,7 +117,8 @@ async def generate_incident_report(incident_id: str) -> dict:
 @router.post("/remediation")
 async def generate_remediation_plan(
     threat_factors: list = Query(..., description="List of threat factors"),
-    risk_level: str = Query(..., description="Risk level: SAFE, SUSPICIOUS, HIGH_RISK, CRITICAL")
+    risk_level: str = Query(..., description="Risk level: SAFE, SUSPICIOUS, HIGH_RISK, CRITICAL"),
+    user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """Generate remediation and prevention plan.
     
@@ -151,7 +153,7 @@ async def generate_remediation_plan(
 
 
 @router.post("/summary-statistics")
-async def generate_summary_statistics() -> dict:
+async def generate_summary_statistics(user: CurrentUser = Depends(get_current_user)) -> dict:
     """Generate summary statistics report for all logs.
     
     Returns:

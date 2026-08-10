@@ -10,10 +10,11 @@ This router handles:
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, File, UploadFile, Query, HTTPException
+from fastapi import APIRouter, Depends, File, UploadFile, Query, HTTPException
 from bson import ObjectId
 
 from database import get_logs_collection
+from middleware.auth import CurrentUser, get_current_user
 from models.log_entry import LogEntry
 from parsers.ssh_parser import SSHParser
 
@@ -22,7 +23,10 @@ ssh_parser = SSHParser()
 
 
 @router.post("/upload")
-async def upload_log_file(file: UploadFile = File(...)) -> dict:
+async def upload_log_file(
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
     """Upload a raw log file for parsing.
 
     Supports .log, .txt, and other text-based log files.
@@ -80,7 +84,10 @@ async def upload_log_file(file: UploadFile = File(...)) -> dict:
 
 
 @router.post("/ingest")
-async def ingest_single_log(log_entry: LogEntry) -> dict:
+async def ingest_single_log(
+    log_entry: LogEntry,
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
     """Ingest a single structured log entry as JSON.
 
     Args:
@@ -125,6 +132,7 @@ async def get_logs(
     event_type: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """Retrieve paginated logs with optional filtering.
 
@@ -198,7 +206,7 @@ async def get_logs(
 
 
 @router.get("/{log_id}")
-async def get_log_by_id(log_id: str) -> dict:
+async def get_log_by_id(log_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
     """Get a single log entry by ID.
 
     Args:
@@ -236,7 +244,7 @@ async def get_log_by_id(log_id: str) -> dict:
 
 
 @router.delete("/{log_id}")
-async def delete_log(log_id: str) -> dict:
+async def delete_log(log_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
     """Delete a single log entry by ID.
 
     Args:

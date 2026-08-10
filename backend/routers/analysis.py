@@ -12,17 +12,18 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 
 from database import get_logs_collection, get_threat_actors_collection
 from analyzers.threat_scorer import calculate_threat_score, get_threat_verdict
+from middleware.auth import CurrentUser, get_current_user
 from threat_intel.ip_profiler import get_ip_profiler
 
 router = APIRouter(prefix="/api/v1/analysis", tags=["analysis"])
 
 
 @router.get("/summary")
-async def get_analysis_summary() -> dict:
+async def get_analysis_summary(user: CurrentUser = Depends(get_current_user)) -> dict:
     """Get overall summary statistics of all logs in database.
 
     Returns:
@@ -92,7 +93,10 @@ async def get_analysis_summary() -> dict:
 
 
 @router.get("/top-attackers")
-async def get_top_attackers(limit: int = Query(10, ge=1, le=100)) -> dict:
+async def get_top_attackers(
+    limit: int = Query(10, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+) -> dict:
     """Get top attacking IP addresses by event count.
 
     Args:
@@ -154,6 +158,7 @@ async def get_top_attackers(limit: int = Query(10, ge=1, le=100)) -> dict:
 async def get_attack_timeline(
     interval: str = Query("hour", pattern="^(hour|day)$"),
     days: int = Query(7, ge=1, le=90),
+    user: CurrentUser = Depends(get_current_user),
 ) -> dict:
     """Get time-series event counts over time.
 
@@ -241,7 +246,7 @@ async def get_attack_timeline(
 
 
 @router.get("/event-types")
-async def get_event_type_distribution() -> dict:
+async def get_event_type_distribution(user: CurrentUser = Depends(get_current_user)) -> dict:
     """Get distribution of event types.
 
     Returns:
@@ -290,7 +295,7 @@ async def get_event_type_distribution() -> dict:
 
 
 @router.get("/heatmap")
-async def get_attack_heatmap() -> dict:
+async def get_attack_heatmap(user: CurrentUser = Depends(get_current_user)) -> dict:
     """Get attack frequency heatmap: hour of day × day of week.
 
     Returns:
@@ -337,7 +342,7 @@ async def get_attack_heatmap() -> dict:
 
 
 @router.post("/ip/{ip}")
-async def analyze_ip_profile(ip: str) -> dict:
+async def analyze_ip_profile(ip: str, user: CurrentUser = Depends(get_current_user)) -> dict:
     """Get complete threat profile for a single IP address.
     
     Combines local log analysis with external threat intelligence from:
