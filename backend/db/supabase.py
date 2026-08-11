@@ -92,6 +92,21 @@ async def auth_logout(access_token: str) -> None:
         raise SupabaseError(resp.status_code, resp.text)
 
 
+async def auth_set_password(access_token: str, new_password: str) -> dict:
+    """Set a new password using a short-lived session token from a Supabase
+    invite/recovery action link (not a normal logged-in session token) —
+    the standard way to complete an invite/password-reset flow."""
+    resp = await _request(
+        "PUT",
+        f"{settings.supabase_url}/auth/v1/user",
+        headers=_user_headers(access_token),
+        json={"password": new_password},
+    )
+    if resp.status_code >= 400:
+        raise SupabaseError(resp.status_code, resp.text)
+    return resp.json()
+
+
 async def admin_get_user(user_id: str) -> dict:
     """Fetch a user's current Auth record (including app_metadata) via the
     service role. Needed before any admin_set_app_metadata call that must

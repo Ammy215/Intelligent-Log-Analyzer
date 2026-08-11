@@ -18,6 +18,7 @@ from db.supabase import (
     admin_set_app_metadata,
     auth_login,
     auth_logout,
+    auth_set_password,
     auth_signup,
     generate_action_link,
     rest_insert,
@@ -47,6 +48,11 @@ class LoginRequest(BaseModel):
 
 class ResendVerificationRequest(BaseModel):
     email: str
+
+
+class SetPasswordRequest(BaseModel):
+    access_token: str
+    new_password: str
 
 
 @router.post("/signup", dependencies=[Depends(rate_limit_by_ip("auth", 10, 900))])
@@ -216,6 +222,23 @@ async def resend_verification(body: ResendVerificationRequest) -> dict:
         raise HTTPException(status_code=502, detail="Could not send verification email — try again shortly")
 
     return generic_response
+
+
+@router.post("/set-password", dependencies=[Depends(rate_limit_by_ip("auth", 10, 900))])
+async def set_password(body: SetPasswordRequest) -> dict:
+    """Complete an invite or password-recovery flow: exchanges the
+    short-lived access_token embedded in that email's action link for a
+    real password on the account. Unauthenticated in the normal JWT sense
+    (no Bearer header) on purpose — the caller isn't logged in yet, that
+    access_token itself is the proof of identity here.
+    """
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    try:
+        await auth_set_password(body.access_token, body.new_password)
+    except SupabaseError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+    return {"status": "success", "message": "Password set — you can now sign in"}
 
 
 @router.get("/me")

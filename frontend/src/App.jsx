@@ -5,6 +5,7 @@ import ProtectedRoute, { PublicOnlyRoute } from './components/auth/ProtectedRout
 import Sidebar from './components/layout/Sidebar'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import SetPassword from './pages/SetPassword'
 import Overview from './pages/Overview'
 import LiveFeed from './pages/LiveFeed'
 import ThreatHunting from './pages/ThreatHunting'
@@ -43,7 +44,31 @@ function AuthenticatedLayout() {
   )
 }
 
+// Supabase invite/recovery emails redirect to the project's Site URL root
+// with the session token in the URL hash — there's no way to point that
+// redirect at /set-password directly without changing the Supabase
+// project's global Site URL (which every other auth email also uses).
+// This has to be read synchronously during render, not in a useEffect:
+// ProtectedRoute's own "not logged in, go to /login" redirect fires from
+// an effect too, and effects run child-first, so ProtectedRoute's Navigate
+// (nested deeper in the tree) always won it and wiped the hash — including
+// the token — before App's effect got a turn. Reading it here, before
+// Routes ever mounts, means that race never happens.
+const hasInviteToken =
+  typeof window !== 'undefined' &&
+  window.location.hash.includes('access_token=') &&
+  window.location.pathname !== '/set-password'
+
 function App() {
+  if (hasInviteToken) {
+    return (
+      <>
+        <SetPassword />
+        <Toaster position="top-right" theme="dark" />
+      </>
+    )
+  }
+
   return (
     <AuthProvider>
       <Routes>
@@ -60,6 +85,14 @@ function App() {
           element={
             <PublicOnlyRoute>
               <Signup />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/set-password"
+          element={
+            <PublicOnlyRoute>
+              <SetPassword />
             </PublicOnlyRoute>
           }
         />

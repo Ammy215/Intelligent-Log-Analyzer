@@ -218,6 +218,14 @@ export const authAPI = {
     return response.data
   },
 
+  setPassword: async (accessToken, newPassword) => {
+    const response = await api.post('/auth/set-password', {
+      access_token: accessToken,
+      new_password: newPassword,
+    })
+    return response.data
+  },
+
   me: async () => {
     const response = await api.get('/auth/me')
     return response.data
