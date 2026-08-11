@@ -17,6 +17,7 @@ from config import settings
 from database import get_logs_collection
 from middleware.auth import CurrentUser, get_current_user
 from middleware.rate_limit import rate_limit_by_org
+from middleware.rbac import require_role
 from models.log_entry import LogEntry
 from parsers.ssh_parser import SSHParser
 from parsers.windows_event_parser import WindowsEventParser
@@ -34,6 +35,7 @@ async def upload_log_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user: CurrentUser = Depends(rate_limit_by_org("ingest", 60, 60)),
+    _role_check: CurrentUser = Depends(require_role("admin", "analyst")),
 ) -> dict:
     """Upload a raw log file for parsing.
 
@@ -138,6 +140,7 @@ async def ingest_single_log(
     background_tasks: BackgroundTasks,
     log_entry: LogEntry,
     user: CurrentUser = Depends(rate_limit_by_org("ingest", 60, 60)),
+    _role_check: CurrentUser = Depends(require_role("admin", "analyst")),
 ) -> dict:
     """Ingest a single structured log entry as JSON.
 
@@ -306,7 +309,7 @@ async def get_log_by_id(log_id: str, user: CurrentUser = Depends(get_current_use
 
 
 @router.delete("/{log_id}")
-async def delete_log(log_id: str, user: CurrentUser = Depends(get_current_user)) -> dict:
+async def delete_log(log_id: str, user: CurrentUser = Depends(require_role("admin"))) -> dict:
     """Delete a single log entry by ID.
 
     Args:

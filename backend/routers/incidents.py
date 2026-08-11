@@ -18,6 +18,7 @@ from database import (
     get_threat_actors_collection,
 )
 from middleware.auth import CurrentUser, get_current_user
+from middleware.rbac import require_role
 from models.incident import Incident, ThreatActor
 from notifications.triggers import notify_critical_incident
 
@@ -142,7 +143,7 @@ async def get_incident(incident_id: str, user: CurrentUser = Depends(get_current
 async def detect_incidents(
     background_tasks: BackgroundTasks,
     time_window_minutes: int = Query(60, ge=5, le=1440),
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_role("admin", "analyst")),
 ) -> dict:
     """Auto-detect incidents by grouping related attacks.
 
@@ -261,7 +262,7 @@ async def detect_incidents(
 async def update_incident_status(
     incident_id: str,
     new_status: str = Body(..., embed=True),
-    user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(require_role("admin", "analyst")),
 ) -> dict:
     """Update incident status.
 
