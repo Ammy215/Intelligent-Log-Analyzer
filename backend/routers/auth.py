@@ -1,9 +1,9 @@
 """Auth endpoints: Supabase-backed signup/login/logout.
 
-Also includes three throwaway endpoints for Phase 1 verification only
-(/me, /my-organization, /admin-only-test) — these exist to prove the JWT
-and RBAC dependencies work, not as real product functionality. Real
-endpoints get gated with these dependencies starting Phase 2.
+/my-organization and /admin-only-test were Phase 1 throwaway endpoints for
+proving the JWT/RBAC dependencies worked — removed pre-deploy, real
+endpoints across the app have exercised those same dependencies for a long
+time now. /me remains: the frontend actually calls it.
 """
 import logging
 from typing import Optional
@@ -22,11 +22,9 @@ from db.supabase import (
     auth_signup,
     generate_action_link,
     rest_insert,
-    rest_select,
 )
 from middleware.auth import CurrentUser, get_current_user
 from middleware.rate_limit import rate_limit_by_ip
-from middleware.rbac import require_role
 from notifications.resend_client import ResendError, send_email
 
 logger = logging.getLogger(__name__)
@@ -254,18 +252,3 @@ async def me(user: CurrentUser = Depends(get_current_user)) -> dict:
     }
 
 
-@router.get("/my-organization")
-async def my_organization(user: CurrentUser = Depends(get_current_user)) -> dict:
-    """Phase 1 test endpoint: queries Postgres using the CALLER's own JWT
-    (not the service role), so this exercises RLS for real. Should only
-    ever return the caller's own organization row — never another org's,
-    and never every org in the table.
-    """
-    rows = await rest_select("organizations", {"select": "*"}, user_token=user.access_token)
-    return {"status": "success", "count": len(rows), "data": rows}
-
-
-@router.get("/admin-only-test")
-async def admin_only_test(user: CurrentUser = Depends(require_role("admin"))) -> dict:
-    """Phase 1 test endpoint: proves the RBAC dependency actually gates by role."""
-    return {"status": "success", "message": f"Welcome, admin {user.email}", "org_id": user.org_id}

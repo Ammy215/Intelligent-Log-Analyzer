@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     debug: bool = True
     secret_key: str = "replace_with_random_64_char_string"
     allowed_origins: str = "http://localhost:8501,http://localhost:3000,http://localhost:5173"
+    # Defaults to dev so /docs and /openapi.json stay on locally with no
+    # extra setup — a real deploy sets ENVIRONMENT=production, which turns
+    # them off (see main.py). Not a secrecy measure (the routes themselves
+    # are still reachable and still auth-gated), just not advertising the
+    # full API surface/schema to anyone who finds the URL.
+    environment: str = "development"
 
     # ── Threat Intelligence ──────────────────────────
     abuseipdb_api_key: str = ""

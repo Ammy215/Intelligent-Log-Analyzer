@@ -5,14 +5,22 @@ the legacy shared HS256 secret — verification means fetching Supabase's
 public key set (JWKS), finding the key that signed a given token by its
 `kid`, and verifying against that. The private key never leaves Supabase;
 nothing this backend holds could be used to forge a token.
+
+Uses PyJWT (not python-jose): python-jose's `cryptography` extra is purely
+additive — it still unconditionally depends on the pure-Python `ecdsa`
+package underneath regardless of extras, which carries a known, unpatched
+timing side-channel (the maintainers' long-standing position is that it's
+out of scope for them to fix). PyJWT's `crypto` extra depends on
+`cryptography` (OpenSSL-backed, constant-time) alone — no ecdsa anywhere in
+its tree.
 """
 import time
 from dataclasses import dataclass
 from typing import Optional
 
 import httpx
+import jwt
 from fastapi import Header, HTTPException
-from jose import JWTError, jwt
 
 from config import settings
 from utils.http_client import client as _http_client
@@ -93,7 +101,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Curre
 
     try:
         unverified_header = jwt.get_unverified_header(token)
-    except JWTError as e:
+    except jwt.exceptions.PyJWTError as e:
         raise HTTPException(status_code=401, detail=f"Malformed token: {e}")
 
     kid = unverified_header.get("kid")
@@ -103,13 +111,14 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Curre
     signing_key = await _find_signing_key(kid)
 
     try:
+        jwk = jwt.PyJWK.from_dict(signing_key)
         payload = jwt.decode(
             token,
-            signing_key,
+            key=jwk,
             algorithms=[signing_key.get("alg", "ES256")],
             audience="authenticated",
         )
-    except JWTError as e:
+    except (jwt.exceptions.PyJWTError, jwt.exceptions.PyJWKError) as e:
         raise HTTPException(status_code=401, detail=f"Invalid or expired token: {e}")
 
     app_metadata = payload.get("app_metadata") or {}

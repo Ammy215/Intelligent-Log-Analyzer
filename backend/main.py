@@ -4,7 +4,7 @@ This is the main application that orchestrates:
 - MongoDB async connection/disconnection via lifespan
 - CORS middleware for dashboard communication
 - All routers organized by domain
-- Automatic Swagger UI at /docs
+- Automatic Swagger UI at /docs (dev only — off when ENVIRONMENT=production)
 """
 import logging
 from contextlib import asynccontextmanager
@@ -52,13 +52,19 @@ async def lifespan(app: FastAPI):
     logger.info("Shutdown complete")
 
 
+# Interactive docs/schema are dev-only — a real deploy sets
+# ENVIRONMENT=production, which disables both routes entirely (404, not
+# just hidden from a nav menu).
+_is_production = settings.environment.lower() == "production"
+
 # Create FastAPI app with lifespan
 app = FastAPI(
     title="Intelligent Log Analyzer API",
     description="Production cybersecurity log analysis platform",
     version="1.0.0",
-    docs_url="/docs",
-    openapi_url="/openapi.json",
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
     lifespan=lifespan,
 )
 

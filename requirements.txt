@@ -18,9 +18,9 @@ numpy==2.3.3
 google-genai==1.5.0
 
 # Log Parsing
-python-evtx==0.7.4
+python-evtx==0.8.1
 
 # Utilities
 httpx==0.28.1
-python-jose==3.5.0
+pyjwt[crypto]==2.13.0
 passlib==1.7.4
