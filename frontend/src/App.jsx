@@ -1,44 +1,53 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute, { PublicOnlyRoute } from './components/auth/ProtectedRoute'
 import Sidebar from './components/layout/Sidebar'
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import SetPassword from './pages/SetPassword'
-import Overview from './pages/Overview'
-import LiveFeed from './pages/LiveFeed'
-import ThreatHunting from './pages/ThreatHunting'
-import IPIntelligence from './pages/IPIntelligence'
-import Incidents from './pages/Incidents'
-import AIAnalyst from './pages/AIAnalyst'
-import AttackMap from './pages/AttackMap'
-import Billing from './pages/Billing'
-import Admin from './pages/Admin'
-import SuperAdmin from './pages/SuperAdmin'
-import Reports from './pages/Reports'
-import Settings from './pages/Settings'
+import LoadingState from './components/shared/LoadingState'
+
+// Route-based code splitting: each page is its own chunk, fetched only when
+// that route is actually visited, instead of every page (charts, maps,
+// admin panels, all of it) being bundled into the one script the login
+// page used to have to download before it could render a single input box.
+const Login = lazy(() => import('./pages/Login'))
+const Signup = lazy(() => import('./pages/Signup'))
+const SetPassword = lazy(() => import('./pages/SetPassword'))
+const Overview = lazy(() => import('./pages/Overview'))
+const LiveFeed = lazy(() => import('./pages/LiveFeed'))
+const ThreatHunting = lazy(() => import('./pages/ThreatHunting'))
+const IPIntelligence = lazy(() => import('./pages/IPIntelligence'))
+const Incidents = lazy(() => import('./pages/Incidents'))
+const AIAnalyst = lazy(() => import('./pages/AIAnalyst'))
+const AttackMap = lazy(() => import('./pages/AttackMap'))
+const Billing = lazy(() => import('./pages/Billing'))
+const Admin = lazy(() => import('./pages/Admin'))
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Settings = lazy(() => import('./pages/Settings'))
 
 function AuthenticatedLayout() {
   return (
     <div className="min-h-screen bg-bg-primary">
       <Sidebar />
       <main className="min-h-screen">
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/live-feed" element={<LiveFeed />} />
-          <Route path="/threat-hunting" element={<ThreatHunting />} />
-          <Route path="/ip-intelligence" element={<IPIntelligence />} />
-          <Route path="/ip-intelligence/:ip" element={<IPIntelligence />} />
-          <Route path="/incidents" element={<Incidents />} />
-          <Route path="/ai-analyst" element={<AIAnalyst />} />
-          <Route path="/attack-map" element={<AttackMap />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/superadmin" element={<SuperAdmin />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
+        <Suspense fallback={<LoadingState fullscreen />}>
+          <Routes>
+            <Route path="/" element={<Overview />} />
+            <Route path="/live-feed" element={<LiveFeed />} />
+            <Route path="/threat-hunting" element={<ThreatHunting />} />
+            <Route path="/ip-intelligence" element={<IPIntelligence />} />
+            <Route path="/ip-intelligence/:ip" element={<IPIntelligence />} />
+            <Route path="/incidents" element={<Incidents />} />
+            <Route path="/ai-analyst" element={<AIAnalyst />} />
+            <Route path="/attack-map" element={<AttackMap />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/superadmin" element={<SuperAdmin />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   )
@@ -62,49 +71,51 @@ const hasInviteToken =
 function App() {
   if (hasInviteToken) {
     return (
-      <>
+      <Suspense fallback={<LoadingState fullscreen />}>
         <SetPassword />
         <Toaster position="top-right" theme="dark" />
-      </>
+      </Suspense>
     )
   }
 
   return (
     <AuthProvider>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <PublicOnlyRoute>
-              <Login />
-            </PublicOnlyRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <PublicOnlyRoute>
-              <Signup />
-            </PublicOnlyRoute>
-          }
-        />
-        <Route
-          path="/set-password"
-          element={
-            <PublicOnlyRoute>
-              <SetPassword />
-            </PublicOnlyRoute>
-          }
-        />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <AuthenticatedLayout />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <Suspense fallback={<LoadingState fullscreen />}>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <Login />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <PublicOnlyRoute>
+                <Signup />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/set-password"
+            element={
+              <PublicOnlyRoute>
+                <SetPassword />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <AuthenticatedLayout />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
       <Toaster position="top-right" theme="dark" />
     </AuthProvider>
   )
