@@ -16,11 +16,11 @@ deliberate availability-over-strictness tradeoff, not an oversight.
 import logging
 from typing import Optional
 
-import httpx
 from fastapi import Depends, HTTPException, Request
 
 from config import settings
 from middleware.auth import CurrentUser, get_current_user
+from utils.http_client import client as _http_client
 
 logger = logging.getLogger(__name__)
 
@@ -31,23 +31,24 @@ async def _incr_with_expiry(key: str, window_seconds: int) -> Optional[int]:
     if not settings.upstash_redis_rest_url:
         return None
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(
-                f"{settings.upstash_redis_rest_url}/incr/{key}",
+        resp = await _http_client.get(
+            f"{settings.upstash_redis_rest_url}/incr/{key}",
+            headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            return None
+        count = resp.json().get("result")
+        if count == 1:
+            # First request in this window — start the TTL now, so the
+            # counter resets window_seconds from the FIRST request, not
+            # from whenever it happens to be read again.
+            await _http_client.get(
+                f"{settings.upstash_redis_rest_url}/expire/{key}/{window_seconds}",
                 headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
+                timeout=5,
             )
-            if resp.status_code != 200:
-                return None
-            count = resp.json().get("result")
-            if count == 1:
-                # First request in this window — start the TTL now, so the
-                # counter resets window_seconds from the FIRST request, not
-                # from whenever it happens to be read again.
-                await client.get(
-                    f"{settings.upstash_redis_rest_url}/expire/{key}/{window_seconds}",
-                    headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
-                )
-            return count
+        return count
     except Exception as e:
         logger.warning(f"Rate limit check failed for key {key!r}: {e}")
         return None

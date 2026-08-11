@@ -17,6 +17,7 @@ import logging
 import httpx
 
 from config import settings
+from utils.http_client import client as _http_client
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +36,14 @@ async def send_email(to: str, subject: str, html: str) -> dict:
     """Send one email via Resend. Raises ResendError on any failure
     (bad/missing API key, Resend-side error, network failure)."""
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                _RESEND_API_URL,
-                headers={
-                    "Authorization": f"Bearer {settings.resend_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={"from": FROM_ADDRESS, "to": [to], "subject": subject, "html": html},
-            )
+        resp = await _http_client.post(
+            _RESEND_API_URL,
+            headers={
+                "Authorization": f"Bearer {settings.resend_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={"from": FROM_ADDRESS, "to": [to], "subject": subject, "html": html},
+        )
     except httpx.RequestError as e:
         raise ResendError(502, f"Could not reach Resend: {e}")
 

@@ -15,6 +15,7 @@ from fastapi import Header, HTTPException
 from jose import JWTError, jwt
 
 from config import settings
+from utils.http_client import client as _http_client
 
 _JWKS_URL = f"{settings.supabase_url}/auth/v1/.well-known/jwks.json"
 _JWKS_CACHE_TTL_SECONDS = 3600
@@ -47,11 +48,10 @@ async def _get_jwks(force_refresh: bool = False) -> list:
         return _jwks_cache["keys"]
 
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            # Supabase's gateway requires an apikey header to route any
-            # request, even this public one — the JWKS content itself
-            # needs no auth, so the low-privilege anon key is appropriate.
-            resp = await client.get(_JWKS_URL, headers={"apikey": settings.supabase_anon_key})
+        # Supabase's gateway requires an apikey header to route any
+        # request, even this public one — the JWKS content itself
+        # needs no auth, so the low-privilege anon key is appropriate.
+        resp = await _http_client.get(_JWKS_URL, headers={"apikey": settings.supabase_anon_key})
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Could not reach Supabase JWKS endpoint: {e}")
 

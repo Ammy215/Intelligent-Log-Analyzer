@@ -12,6 +12,7 @@ import httpx
 
 from config import settings
 from threat_intel.redis_cache import cache_get, cache_set
+from utils.http_client import client as _http_client
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +72,7 @@ class GeoIPClient:
             if self.api_key and self.api_key != "your_key_here":
                 params["token"] = self.api_key
 
-            async with httpx.AsyncClient(timeout=5) as client:
-                resp = await client.get(f"{self.base_url}/{ip}/json", params=params)
+            resp = await _http_client.get(f"{self.base_url}/{ip}/json", params=params, timeout=5)
 
             if resp.status_code != 200:
                 logger.warning(f"IPInfo returned {resp.status_code} for {ip}")

@@ -10,6 +10,7 @@ from typing import Any, Optional, Union
 import httpx
 
 from config import settings
+from utils.http_client import client as _http_client
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,7 @@ def _service_headers() -> dict:
 
 async def _request(method: str, url: str, **kwargs) -> httpx.Response:
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            return await client.request(method, url, **kwargs)
+        return await _http_client.request(method, url, **kwargs)
     except httpx.RequestError as e:
         logger.error(f"Supabase request failed: {method} {url}: {e}")
         raise SupabaseError(502, f"Could not reach Supabase: {e}")

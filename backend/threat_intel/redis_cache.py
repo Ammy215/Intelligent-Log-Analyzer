@@ -13,9 +13,8 @@ import json
 import logging
 from typing import Any, Optional
 
-import httpx
-
 from config import settings
+from utils.http_client import client as _http_client
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +28,11 @@ async def cache_get(key: str) -> Optional[Any]:
     if not settings.upstash_redis_rest_url:
         return None
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(
-                f"{settings.upstash_redis_rest_url}/get/{key}",
-                headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
-            )
+        resp = await _http_client.get(
+            f"{settings.upstash_redis_rest_url}/get/{key}",
+            headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
+            timeout=5,
+        )
         if resp.status_code != 200:
             return None
         result = resp.json().get("result")
@@ -50,12 +49,12 @@ async def cache_set(key: str, value: Any, ttl_seconds: int = 86400) -> None:
     if not settings.upstash_redis_rest_url:
         return
     try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            await client.post(
-                f"{settings.upstash_redis_rest_url}/set/{key}",
-                headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
-                params={"EX": ttl_seconds},
-                content=json.dumps(value),
-            )
+        await _http_client.post(
+            f"{settings.upstash_redis_rest_url}/set/{key}",
+            headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
+            params={"EX": ttl_seconds},
+            content=json.dumps(value),
+            timeout=5,
+        )
     except Exception as e:
         logger.warning(f"Redis cache_set failed for key {key}: {e}")

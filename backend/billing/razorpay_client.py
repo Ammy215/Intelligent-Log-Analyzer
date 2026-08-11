@@ -26,6 +26,7 @@ from typing import Optional
 import httpx
 
 from config import settings
+from utils.http_client import client as _http_client
 
 logger = logging.getLogger(__name__)
 
@@ -61,12 +62,11 @@ async def create_payment_link(org_id: str, amount_inr: int, description: str, ca
     }
 
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                f"{RAZORPAY_API_BASE}/payment_links",
-                auth=(settings.razorpay_key_id, settings.razorpay_key_secret),
-                json=payload,
-            )
+        resp = await _http_client.post(
+            f"{RAZORPAY_API_BASE}/payment_links",
+            auth=(settings.razorpay_key_id, settings.razorpay_key_secret),
+            json=payload,
+        )
     except httpx.RequestError as e:
         logger.error(f"Razorpay payment link request failed: {e}")
         raise RazorpayError(502, f"Could not reach Razorpay: {e}")
