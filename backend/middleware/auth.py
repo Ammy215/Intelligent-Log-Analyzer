@@ -28,6 +28,12 @@ class CurrentUser:
     org_id: Optional[str]
     role: Optional[str]
     access_token: str
+    # Platform-level flag, independent of org_id/role — a super admin is
+    # still "admin" of their own org too, this is an orthogonal capability,
+    # not a 4th value in the org-scoped role. Only ever true for the one
+    # account it's deliberately set on (see db/supabase.py:
+    # admin_set_app_metadata) — never settable by a user themselves.
+    is_superadmin: bool = False
 
 
 async def _get_jwks(force_refresh: bool = False) -> list:
@@ -114,4 +120,5 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Curre
         org_id=app_metadata.get("org_id"),
         role=app_metadata.get("role"),
         access_token=token,
+        is_superadmin=app_metadata.get("is_superadmin", False),
     )

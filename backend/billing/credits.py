@@ -33,15 +33,21 @@ def _current_period() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
-async def get_org_credits(org_id: str, user_token: str) -> dict:
+async def get_org_credits(org_id: str, user_token: str = None, use_service_role: bool = False) -> dict:
     """Get this org's credit balance, lazily resetting the free allowance
     if the stored period is stale (a new month has started since the last
     check, or this is the org's very first check and the period is null).
+
+    use_service_role=True bypasses RLS for cross-org reads — the only
+    caller that needs it is the superadmin router (checking a balance for
+    an org the caller isn't a member of); every normal in-org call keeps
+    using the caller's own token, same as before.
     """
     org_rows = await rest_select(
         "organizations",
         {"select": "id,credits_current_period,free_credits_remaining", "id": f"eq.{org_id}"},
         user_token=user_token,
+        use_service_role=use_service_role,
     )
     if not org_rows:
         raise ValueError(f"Org {org_id} not found")
@@ -68,6 +74,7 @@ async def get_org_credits(org_id: str, user_token: str) -> dict:
         "credits_ledger",
         {"select": "delta", "org_id": f"eq.{org_id}"},
         user_token=user_token,
+        use_service_role=use_service_role,
     )
     purchased_credits = sum(row["delta"] for row in ledger_rows)
 

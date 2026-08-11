@@ -265,6 +265,39 @@ export const adminAPI = {
   },
 }
 
+// ============ SUPER ADMIN API (platform-level, not org-scoped) ============
+export const superadminAPI = {
+  listOrganizations: async () => {
+    const response = await api.get('/superadmin/organizations')
+    return response.data
+  },
+
+  listUsers: async () => {
+    const response = await api.get('/superadmin/users')
+    return response.data
+  },
+
+  getStats: async () => {
+    const response = await api.get('/superadmin/stats')
+    return response.data
+  },
+
+  getOrganization: async (orgId) => {
+    const response = await api.get(`/superadmin/organizations/${orgId}`)
+    return response.data
+  },
+
+  adjustCredits: async (orgId, delta, reason) => {
+    const response = await api.patch(`/superadmin/organizations/${orgId}/credits`, { delta, reason })
+    return response.data
+  },
+
+  changeUserRole: async (userId, role) => {
+    const response = await api.patch(`/superadmin/users/${userId}/role`, { role })
+    return response.data
+  },
+}
+
 // ============ HEALTH CHECK ============
 export const healthAPI = {
   // Check API health

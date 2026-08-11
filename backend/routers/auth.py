@@ -227,6 +227,7 @@ async def me(user: CurrentUser = Depends(get_current_user)) -> dict:
         "email": user.email,
         "org_id": user.org_id,
         "role": user.role,
+        "is_superadmin": user.is_superadmin,
     }
 
 

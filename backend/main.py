@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from config import settings
 from database import DatabaseManager, create_indexes
 from middleware.rate_limit import global_rate_limit
-from routers import logs, analysis, incidents, reports, auth, billing, admin
+from routers import logs, analysis, incidents, reports, auth, billing, admin, superadmin
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
@@ -117,6 +117,7 @@ app.include_router(analysis.router)
 app.include_router(incidents.router)
 app.include_router(reports.router)
 app.include_router(admin.router)
+app.include_router(superadmin.router)
 
 
 if __name__ == "__main__":

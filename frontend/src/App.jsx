@@ -14,6 +14,7 @@ import AIAnalyst from './pages/AIAnalyst'
 import AttackMap from './pages/AttackMap'
 import Billing from './pages/Billing'
 import Admin from './pages/Admin'
+import SuperAdmin from './pages/SuperAdmin'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 
@@ -33,6 +34,7 @@ function AuthenticatedLayout() {
           <Route path="/attack-map" element={<AttackMap />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/superadmin" element={<SuperAdmin />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

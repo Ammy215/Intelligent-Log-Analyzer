@@ -92,6 +92,22 @@ async def auth_logout(access_token: str) -> None:
         raise SupabaseError(resp.status_code, resp.text)
 
 
+async def admin_get_user(user_id: str) -> dict:
+    """Fetch a user's current Auth record (including app_metadata) via the
+    service role. Needed before any admin_set_app_metadata call that must
+    preserve existing claims — that call is a full PUT replace, not a
+    merge, confirmed empirically (Supabase's admin update endpoint does
+    NOT shallow-merge app_metadata despite looking like a partial update)."""
+    resp = await _request(
+        "GET",
+        f"{settings.supabase_url}/auth/v1/admin/users/{user_id}",
+        headers=_service_headers(),
+    )
+    if resp.status_code >= 400:
+        raise SupabaseError(resp.status_code, resp.text)
+    return resp.json()
+
+
 async def admin_set_app_metadata(user_id: str, app_metadata: dict) -> dict:
     """Set org_id/role claims on a user via the service role key.
 

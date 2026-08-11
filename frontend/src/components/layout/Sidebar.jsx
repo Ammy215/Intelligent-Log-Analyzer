@@ -13,6 +13,7 @@ import {
   CreditCard,
   LogOut,
   ShieldCheck,
+  Crown,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { analysisAPI } from '@/lib/api'
@@ -37,9 +38,12 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
 
-  const items = user?.role === 'admin'
+  let items = user?.role === 'admin'
     ? [...navItems, { path: '/admin', label: 'Admin', icon: ShieldCheck }]
     : navItems
+  if (user?.is_superadmin) {
+    items = [...items, { path: '/superadmin', label: 'Super Admin', icon: Crown }]
+  }
 
   const { data: summary } = useQuery({
     queryKey: ['summary'],
