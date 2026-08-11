@@ -4,6 +4,7 @@ import { Shield, LogIn } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Card } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import PasswordInput from '@/components/ui/PasswordInput'
 
 export default function Login() {
   const { login } = useAuth()
@@ -63,10 +64,8 @@ export default function Login() {
 
             <div>
               <label className="text-sm text-text-secondary mb-1 block">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 required
-                className="input w-full"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
