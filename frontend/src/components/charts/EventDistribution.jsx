@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart as PieChartIcon } from 'lucide-react'
 import { analysisAPI } from '@/lib/api'
 import LoadingState from '@/components/shared/LoadingState'
 import ErrorState from '@/components/shared/ErrorState'
+import EmptyState from '@/components/shared/EmptyState'
 
-const COLORS = ['#00d4ff', '#8b5cf6', '#ffb800', '#ff3366', '#00ff88', '#64748b']
+const COLORS = ['#00d4ff', '#8b5cf6', '#ffb800', '#ff3366', '#00ff88', '#8598b3']
 
 export default function EventDistribution() {
   const { data, isLoading, error, refetch } = useQuery({
@@ -16,7 +18,7 @@ export default function EventDistribution() {
   if (isLoading) {
     return (
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-4">Event Distribution</h3>
+        <h3 className="label-eyebrow mb-5">Event Distribution</h3>
         <LoadingState />
       </div>
     )
@@ -25,7 +27,7 @@ export default function EventDistribution() {
   if (error) {
     return (
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-4">Event Distribution</h3>
+        <h3 className="label-eyebrow mb-5">Event Distribution</h3>
         <ErrorState error={error} onRetry={refetch} />
       </div>
     )
@@ -36,8 +38,8 @@ export default function EventDistribution() {
   if (eventData.length === 0) {
     return (
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-4">Event Distribution</h3>
-        <p className="text-text-secondary text-center py-8">No event data available</p>
+        <h3 className="label-eyebrow mb-5">Event Distribution</h3>
+        <EmptyState message="No event data available" icon={PieChartIcon} />
       </div>
     )
   }
@@ -66,7 +68,7 @@ export default function EventDistribution() {
 
   return (
     <div className="card p-6">
-      <h3 className="text-lg font-semibold mb-4">Event Distribution</h3>
+      <h3 className="label-eyebrow mb-5">Event Distribution</h3>
       <ResponsiveContainer width="100%" height={250}>
         <PieChart>
           <Pie

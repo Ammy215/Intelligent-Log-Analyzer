@@ -15,7 +15,7 @@ export default function AttackTimeline() {
   if (isLoading) {
     return (
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-4">Attack Timeline (Last 24 Hours)</h3>
+        <h3 className="label-eyebrow mb-5">Attack Timeline — Last 24 Hours</h3>
         <LoadingState />
       </div>
     )
@@ -24,7 +24,7 @@ export default function AttackTimeline() {
   if (error) {
     return (
       <div className="card p-6">
-        <h3 className="text-lg font-semibold mb-4">Attack Timeline (Last 24 Hours)</h3>
+        <h3 className="label-eyebrow mb-5">Attack Timeline — Last 24 Hours</h3>
         <ErrorState error={error} onRetry={refetch} />
       </div>
     )
@@ -58,19 +58,19 @@ export default function AttackTimeline() {
 
   return (
     <div className="card p-6">
-      <h3 className="text-lg font-semibold mb-4">Attack Timeline (Last 24 Hours)</h3>
+      <h3 className="label-eyebrow mb-5">Attack Timeline — Last 24 Hours</h3>
       <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={formattedData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1a2d4a" opacity={0.5} />
           <XAxis
             dataKey="time"
-            stroke="#64748b"
-            tick={{ fill: '#64748b', fontSize: 12 }}
+            stroke="#8598b3"
+            tick={{ fill: '#8598b3', fontSize: 12 }}
             tickLine={false}
           />
           <YAxis
-            stroke="#64748b"
-            tick={{ fill: '#64748b', fontSize: 12 }}
+            stroke="#8598b3"
+            tick={{ fill: '#8598b3', fontSize: 12 }}
             tickLine={false}
           />
           <Tooltip content={<CustomTooltip />} />

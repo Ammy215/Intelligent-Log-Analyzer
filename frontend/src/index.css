@@ -19,38 +19,73 @@
 }
 
 @layer components {
-  /* Card styles */
+  /* Card styles — subtle elevation (soft shadow + 1px inner top highlight)
+     instead of a flat bordered box, so panels read as physical surfaces
+     rather than outlined divs. */
   .card {
     @apply bg-bg-secondary border border-bg-border rounded-xl;
+    /* Plain CSS, not @apply shadow-card — Tailwind 3's dev-mode @apply
+       pipeline chokes on a comma-containing custom boxShadow utility here
+       (production `vite build` handles it fine; only the dev server's
+       incremental PostCSS pass doesn't) — same visual result, sidesteps
+       the dev/build discrepancy entirely. */
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  .card-interactive {
+    @apply bg-bg-secondary border border-bg-border rounded-xl transition-all duration-150 cursor-pointer;
+    @apply hover:border-accent-cyan/30;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  .card-interactive:hover {
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 16px 40px -14px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(0, 212, 255, 0.08);
+  }
+
+  /* Small-caps section label — the "eyebrow" that gives real hierarchy
+     between a page title and card titles, instead of every heading being
+     the same size/weight. */
+  .label-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-text-secondary;
   }
 
   /* Input styles */
   .input {
-    @apply bg-bg-input border border-bg-border rounded-lg px-4 py-2 text-text-primary;
-    @apply focus:outline-none focus:ring-2 focus:ring-accent-cyan focus:border-accent-cyan;
+    @apply bg-bg-input border border-bg-border rounded-lg px-3.5 py-2 text-sm text-text-primary;
+    @apply focus:outline-none focus:ring-2 focus:ring-accent-cyan/40 focus:border-accent-cyan;
     @apply transition-all duration-150;
   }
 
   /* Button styles */
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-primary;
   }
 
   .btn-primary {
     @apply bg-accent-cyan text-bg-primary;
-    @apply hover:bg-opacity-90;
+    @apply hover:brightness-110;
     @apply focus:ring-accent-cyan;
   }
 
   .btn-secondary {
     @apply bg-bg-tertiary text-text-primary border border-bg-border;
-    @apply hover:bg-bg-border;
+    @apply hover:border-text-muted;
+  }
+
+  .btn-secondary:hover {
+    background-color: #122544; /* bg.elevated — plain CSS, see .card comment above */
+  }
+
+  .btn-ghost {
+    @apply text-text-secondary;
+    @apply hover:bg-bg-tertiary hover:text-text-primary;
   }
 
   .btn-danger {
     @apply bg-accent-red text-white;
-    @apply hover:bg-opacity-90;
+    @apply hover:brightness-110;
     @apply focus:ring-accent-red;
   }
 

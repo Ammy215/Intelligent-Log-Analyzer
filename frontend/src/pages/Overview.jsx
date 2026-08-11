@@ -77,12 +77,13 @@ export default function Overview() {
 
   // Delta values aren't computed from historical data yet — omitted (0/neutral)
   // rather than faked, since there's no trend baseline to compare against.
+  // Color is reserved for what's actually alarming (critical alerts) —
+  // every other metric stays neutral so the one that matters still stands out.
   const metrics = [
     {
       title: 'Total Events Today',
       value: totalEvents,
       icon: Activity,
-      iconColor: COLORS.accent.cyan,
       delta: null,
       deltaType: 'neutral',
     },
@@ -91,6 +92,7 @@ export default function Overview() {
       value: criticalAlerts,
       icon: AlertTriangle,
       iconColor: COLORS.accent.red,
+      emphasis: criticalAlerts > 0,
       delta: null,
       deltaType: 'neutral',
     },
@@ -98,7 +100,6 @@ export default function Overview() {
       title: 'Unique Attackers',
       value: uniqueAttackers,
       icon: Users,
-      iconColor: COLORS.accent.amber,
       delta: null,
       deltaType: 'neutral',
     },
@@ -106,7 +107,8 @@ export default function Overview() {
       title: 'Active Incidents',
       value: openIncidents?.total_count ?? 0,
       icon: FileWarning,
-      iconColor: COLORS.accent.purple,
+      iconColor: COLORS.accent.amber,
+      emphasis: (openIncidents?.total_count ?? 0) > 0,
       delta: null,
       deltaType: 'neutral',
     },
@@ -114,7 +116,6 @@ export default function Overview() {
       title: 'Credit Balance',
       value: credits?.total_available ?? 0,
       icon: CreditCard,
-      iconColor: COLORS.accent.green,
       delta: null,
       deltaType: 'neutral',
     },
@@ -126,19 +127,19 @@ export default function Overview() {
       subtitle="Real-time security monitoring dashboard"
     >
       {/* Metric Cards Row */}
-      <div className="grid grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-5 gap-4 mb-6">
         {metrics.map((metric, index) => (
           <MetricCard key={metric.title} {...metric} index={index} />
         ))}
       </div>
 
       {/* Attack Timeline - Full Width */}
-      <div className="mb-8">
+      <div className="mb-6">
         <AttackTimeline />
       </div>
 
       {/* Two Column Layout */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         {/* Top Attackers - 2 columns */}
         <div className="col-span-2">
           <TopAttackersChart topSources={topSources} />

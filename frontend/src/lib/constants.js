@@ -4,24 +4,32 @@ export const COLORS = {
     primary: '#050d1a',
     secondary: '#0a1628',
     tertiary: '#0f1e35',
+    elevated: '#122544',
     border: '#1a2d4a',
     input: '#0d1e38',
   },
+  // cyan is the ONE brand/UI accent (primary actions, links, active nav,
+  // focus rings) — never reused as a severity color, so it stays legible
+  // as "this is interactive" at a glance. purple is reserved for AI
+  // Analyst-specific accents. Severity/status colors below are semantic-only.
   accent: {
     cyan: '#00d4ff',
     green: '#00ff88',
     amber: '#ffb800',
     red: '#ff3366',
     purple: '#8b5cf6',
+    info: '#5b8cff',
   },
   text: {
     primary: '#e2e8f0',
-    secondary: '#64748b',
-    muted: '#334155',
+    secondary: '#8598b3',
+    muted: '#4a5b76',
   },
 }
 
-// Severity mappings
+// Severity mappings. MEDIUM uses the dedicated `info` blue, not the brand
+// cyan — a MEDIUM badge used to be visually identical to "this is a link/
+// button", which is exactly the accent-color overload this redesign fixes.
 export const SEVERITY_COLORS = {
   CRITICAL: {
     bg: 'rgba(255, 51, 102, 0.12)',
@@ -34,14 +42,14 @@ export const SEVERITY_COLORS = {
     border: 'rgba(255, 184, 0, 0.25)',
   },
   MEDIUM: {
-    bg: 'rgba(0, 212, 255, 0.12)',
-    text: '#00d4ff',
-    border: 'rgba(0, 212, 255, 0.25)',
+    bg: 'rgba(91, 140, 255, 0.12)',
+    text: '#5b8cff',
+    border: 'rgba(91, 140, 255, 0.25)',
   },
   LOW: {
-    bg: 'rgba(100, 116, 139, 0.12)',
+    bg: 'rgba(133, 152, 179, 0.12)',
     text: '#94a3b8',
-    border: 'rgba(100, 116, 139, 0.25)',
+    border: 'rgba(133, 152, 179, 0.25)',
   },
   SAFE: {
     bg: 'rgba(0, 255, 136, 0.12)',
@@ -76,7 +84,7 @@ export const API_BASE_URL = 'http://localhost:8000/api/v1'
 export const CHART_COLORS = {
   CRITICAL: '#ff3366',
   HIGH: '#ffb800',
-  MEDIUM: '#00d4ff',
+  MEDIUM: '#5b8cff',
   LOW: '#94a3b8',
   primary: '#00d4ff',
   secondary: '#8b5cf6',

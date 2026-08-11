@@ -1,22 +1,23 @@
-import { getSeverityColor } from '@/lib/utils'
+import Badge from '@/components/ui/Badge'
+
+const VARIANT_BY_SEVERITY = {
+  CRITICAL: 'critical',
+  HIGH: 'high',
+  MEDIUM: 'medium',
+  LOW: 'low',
+  SAFE: 'safe',
+}
 
 export default function SeverityBadge({ severity, className = '' }) {
   if (!severity) return null
 
-  const colors = getSeverityColor(severity)
-
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${className} ${
-        severity === 'CRITICAL' ? 'pulse-critical' : ''
-      }`}
-      style={{
-        backgroundColor: colors.bg,
-        color: colors.text,
-        borderColor: colors.border,
-      }}
+    <Badge
+      variant={VARIANT_BY_SEVERITY[severity] || 'muted'}
+      pulse={severity === 'CRITICAL'}
+      className={className}
     >
       {severity}
-    </span>
+    </Badge>
   )
 }
