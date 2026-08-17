@@ -54,8 +54,25 @@ async def list_audit_log(user: CurrentUser = Depends(require_role("admin"))) -> 
             },
             user_token=user.access_token,
         )
+
+        # Resolve actor_id -> a human identity. One extra query for the whole
+        # org, not one per row: the UI otherwise had to render a raw UUID
+        # fragment, which tells an admin reading their own audit log nothing.
+        profiles = await rest_select(
+            "user_profiles",
+            {"select": "id,full_name,email", "org_id": f"eq.{user.org_id}"},
+            user_token=user.access_token,
+        )
     except SupabaseError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+    by_id = {p["id"]: p for p in profiles}
+    for row in rows:
+        # actor_id is null for pre-auth events (a failed login isn't a known
+        # user yet) and unresolvable for members who have since been removed.
+        profile = by_id.get(row.get("actor_id"))
+        row["actor_name"] = (profile or {}).get("full_name")
+        row["actor_email"] = (profile or {}).get("email")
 
     return {"status": "success", "count": len(rows), "data": rows}
 

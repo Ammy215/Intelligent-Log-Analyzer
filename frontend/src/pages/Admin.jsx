@@ -93,7 +93,19 @@ function AuditLogSection() {
               {entries.map((e) => (
                 <tr key={e.id} className="border-b border-bg-border">
                   <td className="py-2 px-3 text-sm font-mono">{formatTimestamp(e.created_at)}</td>
-                  <td className="py-2 px-3 text-sm font-mono">{e.actor_id ? e.actor_id.slice(0, 8) : '—'}</td>
+                  <td className="py-2 px-3 text-sm">
+                    {e.actor_name || e.actor_email ? (
+                      <span title={e.actor_email || undefined}>{e.actor_name || e.actor_email}</span>
+                    ) : e.actor_id ? (
+                      // Still resolvable to nothing — a member who has since
+                      // been removed. Show the id rather than pretend.
+                      <span className="font-mono text-text-muted" title={e.actor_id}>
+                        {e.actor_id.slice(0, 8)} (removed)
+                      </span>
+                    ) : (
+                      <span className="text-text-muted" title="No signed-in user — e.g. a failed login">—</span>
+                    )}
+                  </td>
                   <td className="py-2 px-3 text-sm">{e.action}</td>
                   <td className="py-2 px-3 text-sm font-mono">{e.ip_address || '—'}</td>
                 </tr>

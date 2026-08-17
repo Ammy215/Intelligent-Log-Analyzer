@@ -120,3 +120,29 @@ export function getErrorMessage(error) {
 export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+// IPInfo doesn't return a full country name, so the backend stores the same
+// 2-letter code in both `country` and `country_code` (see
+// threat_intel/geolocation_client.py). Resolve it to something readable at
+// display time — Intl.DisplayNames is built into the browser.
+let _regionNames
+try {
+  _regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
+} catch {
+  _regionNames = null
+}
+
+export function countryDisplayName(code, fallback) {
+  if (code && code.length === 2 && _regionNames) {
+    try {
+      const name = _regionNames.of(code.toUpperCase())
+      // .of() echoes the input back for codes it doesn't recognise
+      if (name && name.toUpperCase() !== code.toUpperCase()) return name
+    } catch {
+      /* unknown region code — fall through */
+    }
+  }
+  // Only prefer the passed-in name if it adds something the code doesn't
+  if (fallback && fallback.toUpperCase() !== (code || '').toUpperCase()) return fallback
+  return code || fallback || null
+}

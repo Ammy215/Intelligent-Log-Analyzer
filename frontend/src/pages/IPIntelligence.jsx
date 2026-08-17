@@ -10,7 +10,7 @@ import ThreatScoreBar from '@/components/shared/ThreatScoreBar'
 import CountryFlag from '@/components/shared/CountryFlag'
 import LoadingState from '@/components/shared/LoadingState'
 import ErrorState from '@/components/shared/ErrorState'
-import { formatTimestamp } from '@/lib/utils'
+import { formatTimestamp, countryDisplayName } from '@/lib/utils'
 
 export default function IPIntelligence() {
   const { ip: urlIP } = useParams()
@@ -195,7 +195,12 @@ export default function IPIntelligence() {
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-text-secondary">Country:</span>{' '}
-                    <span>{profile.threat_intelligence.geolocation.country || 'N/A'}</span>
+                    <span>
+                      {countryDisplayName(
+                        profile.threat_intelligence.geolocation.country_code,
+                        profile.threat_intelligence.geolocation.country
+                      ) || <span className="text-text-muted">—</span>}
+                    </span>
                   </div>
                   <div>
                     <span className="text-text-secondary">City:</span>{' '}

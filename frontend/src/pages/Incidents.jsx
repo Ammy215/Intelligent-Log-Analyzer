@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Play, Filter, Network, Globe2, Brain, MousePointerClick } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { AlertTriangle, Play, Filter, Network, Globe2, Brain, MousePointerClick, Loader2, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { incidentsAPI } from '@/lib/api'
+import { incidentsAPI, reportsAPI } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 import PageWrapper from '@/components/layout/PageWrapper'
 import SeverityBadge from '@/components/shared/SeverityBadge'
 import IPAddress from '@/components/shared/IPAddress'
@@ -19,8 +21,35 @@ import ErrorState from '@/components/shared/ErrorState'
 const STATUS_VARIANT = { open: 'muted', investigating: 'muted', closed: 'safe' }
 
 export default function Incidents() {
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [selectedIncident, setSelectedIncident] = useState(null)
   const [statusFilter, setStatusFilter] = useState('')
+  const [reportError, setReportError] = useState('')
+
+  // Report generation is admin/analyst only server-side (require_role on
+  // /reports/*), so viewers don't get an action that can only 403.
+  const canGenerate = user?.role === 'admin' || user?.role === 'analyst'
+
+  const { mutate: generateReport, isPending: generating } = useMutation({
+    mutationFn: (incidentId) => reportsAPI.generateIncidentReport(incidentId),
+    onSuccess: (data) => {
+      setReportError('')
+      queryClient.invalidateQueries({ queryKey: ['incident-detail', selectedIncident] })
+      queryClient.invalidateQueries({ queryKey: ['billing-credits'] })
+      if (data?.credits?.spent > 0) {
+        toast.success(
+          `1 credit spent (${data.credits.source}) — ${data.credits.total_available} remaining`
+        )
+      }
+    },
+    onError: (err) => {
+      const detail = err.response?.data?.detail
+      setReportError(
+        typeof detail === 'string' ? detail : detail?.msg || 'Could not generate the report'
+      )
+    },
+  })
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['incidents', statusFilter],
@@ -207,8 +236,10 @@ export default function Incidents() {
                 </div>
               )}
 
-              {/* AI Report */}
-              {detail.ai_report && (
+              {/* AI Report — or, when there isn't one yet, the offer to make
+                  it. Report generation used to live only on the AI Analyst
+                  page, leaving this panel dead below the fold. */}
+              {detail.ai_report ? (
                 <div className="card">
                   <h3 className="label-eyebrow mb-4 flex items-center gap-2 text-accent-purple">
                     <Brain className="w-3.5 h-3.5" />
@@ -217,6 +248,51 @@ export default function Incidents() {
                   <div className="markdown-content text-sm prose-sm">
                     <ReactMarkdown>{detail.ai_report}</ReactMarkdown>
                   </div>
+                </div>
+              ) : (
+                <div className="card border-accent-purple/20">
+                  <h3 className="label-eyebrow mb-4 flex items-center gap-2 text-accent-purple">
+                    <Brain className="w-3.5 h-3.5" />
+                    AI Analysis
+                  </h3>
+
+                  {generating ? (
+                    <div className="rounded-xl border border-dashed border-accent-purple/30 bg-accent-purple/[0.04] px-6 py-10 text-center">
+                      <Loader2 className="w-6 h-6 text-accent-purple animate-spin mx-auto mb-3" />
+                      <p className="text-sm text-text-primary font-medium">Writing the report…</p>
+                      <p className="text-xs text-text-muted mt-1">
+                        Summarising the attack chain and recommending next steps.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-bg-border px-6 py-9 text-center">
+                      <div className="w-11 h-11 rounded-full bg-accent-purple/10 flex items-center justify-center mx-auto mb-3">
+                        <Sparkles className="w-5 h-5 text-accent-purple" />
+                      </div>
+                      <p className="text-sm text-text-primary mb-1">No write-up for this incident yet</p>
+                      <p className="text-xs text-text-muted max-w-sm mx-auto leading-relaxed mb-5">
+                        Generate an analyst report covering what happened, how the events connect and
+                        what to do about it. Costs 1 credit.
+                      </p>
+
+                      {reportError && (
+                        <div className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-lg px-3 py-2 mb-4 text-left">
+                          {reportError}
+                        </div>
+                      )}
+
+                      {canGenerate ? (
+                        <Button onClick={() => generateReport(selectedIncident)}>
+                          <Sparkles className="w-4 h-4" />
+                          Generate AI report
+                        </Button>
+                      ) : (
+                        <p className="text-xs text-text-muted">
+                          Analysts and admins can generate reports.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
