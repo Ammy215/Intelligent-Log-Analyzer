@@ -63,17 +63,17 @@ export default function ThreatHunting() {
           <h3 className="text-lg font-semibold">Filters</h3>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <input
             type="text"
             placeholder="IP Address"
-            className="input"
+            className="input w-full"
             value={filters.source_ip}
             onChange={(e) => setFilters({ ...filters, source_ip: e.target.value })}
           />
 
           <select
-            className="input"
+            className="input w-full"
             value={filters.severity}
             onChange={(e) => setFilters({ ...filters, severity: e.target.value })}
           >
@@ -85,7 +85,7 @@ export default function ThreatHunting() {
           </select>
 
           <select
-            className="input"
+            className="input w-full"
             value={filters.event_type}
             onChange={(e) => setFilters({ ...filters, event_type: e.target.value })}
           >
@@ -97,7 +97,7 @@ export default function ThreatHunting() {
           </select>
 
           <select
-            className="input"
+            className="input w-full"
             value={filters.limit}
             onChange={(e) => setFilters({ ...filters, limit: parseInt(e.target.value) })}
           >
@@ -107,7 +107,7 @@ export default function ThreatHunting() {
           </select>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button onClick={handleApplyFilters} className="btn btn-primary">
             <Search className="w-4 h-4 mr-2" />
             Apply Filters
@@ -115,22 +115,24 @@ export default function ThreatHunting() {
           <button onClick={handleClearFilters} className="btn btn-secondary">
             Clear All
           </button>
-          <span className="text-text-secondary ml-auto">
+          <span className="text-text-secondary sm:ml-auto text-sm">
             Results: {totalCount} logs
           </span>
         </div>
       </div>
 
       {/* Results Table */}
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6">
         {isLoading ? (
           <LoadingState />
         ) : logs.length === 0 ? (
           <EmptyState message="No logs match your filters" />
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            {/* min-w keeps the columns at a readable width and lets the
+                container scroll instead of crushing 6 columns into a sliver. */}
+            <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+              <table className="w-full min-w-[860px]">
                 <thead>
                   <tr className="border-b border-bg-border text-left">
                     <th className="py-3 px-4 text-text-secondary text-sm font-medium">
@@ -159,7 +161,7 @@ export default function ThreatHunting() {
                       key={log._id}
                       className="border-b border-bg-border hover:bg-bg-tertiary transition-colors cursor-pointer"
                     >
-                      <td className="py-3 px-4 text-sm font-mono">
+                      <td className="py-3 px-4 text-sm font-mono whitespace-nowrap">
                         {formatTimestamp(log.timestamp)}
                       </td>
                       <td className="py-3 px-4">
@@ -170,7 +172,9 @@ export default function ThreatHunting() {
                         <SeverityBadge severity={log.severity} />
                       </td>
                       <td className="py-3 px-4 text-sm font-mono">
-                        {log.username || 'N/A'}
+                        {log.username || (
+                          <span className="text-text-muted select-none" title="No username on this event">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <ThreatScoreBar score={log.threat_score || 0} className="w-32" />

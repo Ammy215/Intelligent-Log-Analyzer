@@ -5,6 +5,7 @@ import { logsAPI } from '@/lib/api'
 import PageWrapper from '@/components/layout/PageWrapper'
 import SeverityBadge from '@/components/shared/SeverityBadge'
 import IPAddress from '@/components/shared/IPAddress'
+import LogUpload from '@/components/features/LogUpload'
 import { formatTimestamp } from '@/lib/utils'
 import { REFRESH_INTERVALS } from '@/lib/constants'
 
@@ -104,7 +105,7 @@ export default function LiveFeed() {
         </>
       }
     >
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="card p-4">
           <p className="text-text-secondary text-sm mb-1">Events per Second</p>
           <p className="text-2xl font-bold">{logs.length > 0 ? '~2.5' : '0'}</p>
@@ -129,8 +130,13 @@ export default function LiveFeed() {
         </div>
       </div>
 
+      {/* Upload — the only entry point in the app for getting log files in */}
+      <div className="mb-6">
+        <LogUpload />
+      </div>
+
       {/* Log Stream */}
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-4">Log Stream</h3>
         <div
           ref={feedRef}

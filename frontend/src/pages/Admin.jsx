@@ -29,7 +29,8 @@ function MembersSection() {
       {members.length === 0 ? (
         <EmptyState message="No members found" />
       ) : (
-        <table className="w-full">
+        <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+        <table className="w-full min-w-[640px]">
           <thead>
             <tr className="border-b border-bg-border text-left">
               <th className="py-2 px-3 text-text-secondary text-sm font-medium">Name</th>
@@ -48,11 +49,12 @@ function MembersSection() {
                     {m.role}
                   </span>
                 </td>
-                <td className="py-2 px-3 text-sm text-text-secondary">{formatTimestamp(m.created_at)}</td>
+                <td className="py-2 px-3 text-sm text-text-secondary whitespace-nowrap">{formatTimestamp(m.created_at)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   )
@@ -77,8 +79,8 @@ function AuditLogSection() {
       {entries.length === 0 ? (
         <EmptyState message="No audit log entries yet" />
       ) : (
-        <div className="max-h-96 overflow-y-auto custom-scrollbar">
-          <table className="w-full">
+        <div className="max-h-96 overflow-auto custom-scrollbar">
+          <table className="w-full min-w-[560px]">
             <thead>
               <tr className="border-b border-bg-border text-left">
                 <th className="py-2 px-3 text-text-secondary text-sm font-medium">Timestamp</th>
@@ -113,7 +115,9 @@ function DetectionRulesSection() {
     queryFn: adminAPI.listDetectionRules,
   })
 
-  const { mutate: saveWeight, isLoading: saving } = useMutation({
+  // isPending, not isLoading (react-query v5) — otherwise the Save button
+  // never disables while the write is in flight.
+  const { mutate: saveWeight, isPending: saving } = useMutation({
     mutationFn: ({ ruleId, weight }) => adminAPI.updateDetectionRule(ruleId, weight),
     onSuccess: (_, { ruleId }) => {
       toast.success('Weight updated')
@@ -141,8 +145,8 @@ function DetectionRulesSection() {
       {rules.length === 0 ? (
         <EmptyState message="No detection rules configured" />
       ) : (
-        <div className="max-h-96 overflow-y-auto custom-scrollbar">
-          <table className="w-full">
+        <div className="max-h-96 overflow-auto custom-scrollbar">
+          <table className="w-full min-w-[560px]">
             <thead>
               <tr className="border-b border-bg-border text-left">
                 <th className="py-2 px-3 text-text-secondary text-sm font-medium">Rule</th>
@@ -207,7 +211,7 @@ function CreditsLedgerSection() {
         <Receipt className="w-5 h-5 text-accent-purple" />
         Credits Ledger
       </h3>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-bg-tertiary p-4 rounded-lg">
           <p className="text-text-secondary text-sm mb-1">Free remaining</p>
           <p className="text-xl font-bold">{balance.free_credits_remaining ?? '—'}</p>
@@ -225,7 +229,8 @@ function CreditsLedgerSection() {
       {ledger.length === 0 ? (
         <EmptyState message="No purchased-credit transactions yet" />
       ) : (
-        <table className="w-full">
+        <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+        <table className="w-full min-w-[620px]">
           <thead>
             <tr className="border-b border-bg-border text-left">
               <th className="py-2 px-3 text-text-secondary text-sm font-medium">Timestamp</th>
@@ -247,6 +252,7 @@ function CreditsLedgerSection() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   )

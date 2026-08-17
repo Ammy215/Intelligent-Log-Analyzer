@@ -30,7 +30,9 @@ function OrganizationsSection({ selectedOrgId, setSelectedOrgId }) {
     enabled: !!selectedOrgId,
   })
 
-  const { mutate: adjustCredits, isLoading: adjusting } = useMutation({
+  // isPending, not isLoading (react-query v5) — otherwise the Apply button
+  // never disables while the credit adjustment is in flight.
+  const { mutate: adjustCredits, isPending: adjusting } = useMutation({
     mutationFn: () => superadminAPI.adjustCredits(selectedOrgId, Number(creditDelta), creditReason || 'superadmin adjustment'),
     onSuccess: () => {
       toast.success('Credits adjusted')
@@ -46,8 +48,8 @@ function OrganizationsSection({ selectedOrgId, setSelectedOrgId }) {
   const orgs = data?.data || []
 
   return (
-    <div className="grid grid-cols-3 gap-6">
-      <div className="col-span-1 space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-0.5">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-1 space-y-2 lg:max-h-[600px] lg:overflow-y-auto custom-scrollbar pr-0.5 min-w-0">
         {orgs.map((org) => {
           const isSelected = selectedOrgId === org.id
           return (
@@ -69,7 +71,7 @@ function OrganizationsSection({ selectedOrgId, setSelectedOrgId }) {
         })}
       </div>
 
-      <div className="col-span-2">
+      <div className="lg:col-span-2 min-w-0">
         {!selectedOrgId && (
           <div className="card flex flex-col items-center justify-center py-24 text-center">
             <div className="w-12 h-12 rounded-full bg-bg-tertiary flex items-center justify-center mb-3">
@@ -87,7 +89,7 @@ function OrganizationsSection({ selectedOrgId, setSelectedOrgId }) {
           <div className="space-y-5">
             <div className="card">
               <h2 className="text-lg font-semibold text-text-primary mb-4">{detail.organization.name}</h2>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <p className="label-eyebrow mb-1.5">Members</p>
                   <p className="text-xl font-semibold text-text-primary tabular-nums">{detail.members.length}</p>
@@ -199,7 +201,7 @@ function UsersSection() {
         All users ({users.length})
       </h3>
       <div className="overflow-x-auto -mx-6">
-        <table className="w-full">
+        <table className="w-full min-w-[760px]">
           <thead>
             <tr className="border-b border-bg-border text-left">
               <th className="py-2.5 px-6 text-text-muted text-[11px] font-semibold uppercase tracking-wider">Name</th>
@@ -269,7 +271,7 @@ export default function SuperAdmin() {
       {statsLoading ? (
         <LoadingState />
       ) : (
-        <div className="grid grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           {metrics.map((m, i) => (
             <MetricCard key={m.title} {...m} index={i} />
           ))}

@@ -48,9 +48,11 @@ export default function Incidents() {
         </Button>
       }
     >
-      <div className="grid grid-cols-3 gap-6">
+      {/* Stacks below lg — side-by-side list+detail on a phone leaves both
+          columns too narrow to read. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Incident List */}
-        <div className="col-span-1 space-y-3">
+        <div className="lg:col-span-1 space-y-3 min-w-0">
           <div className="flex items-center gap-2">
             <Filter className="w-3.5 h-3.5 text-text-muted shrink-0" />
             <select
@@ -65,7 +67,9 @@ export default function Incidents() {
             </select>
           </div>
 
-          <div className="space-y-2 max-h-[720px] overflow-y-auto custom-scrollbar pr-0.5">
+          {/* Capped-height scroll region only from lg — on mobile a nested
+              scroller inside the page scroll is a trap, so it just flows. */}
+          <div className="space-y-2 lg:max-h-[720px] lg:overflow-y-auto custom-scrollbar pr-0.5">
             {isLoading && <LoadingState />}
             {error && <ErrorState error={error} onRetry={refetch} />}
             {!isLoading && incidents.length === 0 && (
@@ -108,7 +112,7 @@ export default function Incidents() {
         </div>
 
         {/* Incident Detail */}
-        <div className="col-span-2">
+        <div className="lg:col-span-2 min-w-0">
           {!selectedIncident && (
             <div className="card flex flex-col items-center justify-center py-24 text-center">
               <div className="w-12 h-12 rounded-full bg-bg-tertiary flex items-center justify-center mb-3">
@@ -136,7 +140,7 @@ export default function Incidents() {
                   <SeverityBadge severity={detail.severity} className="text-sm px-3 py-1.5 shrink-0" />
                 </div>
 
-                <div className="grid grid-cols-4 gap-4 pt-5 border-t border-bg-border">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-bg-border">
                   <div>
                     <p className="label-eyebrow mb-1.5">Status</p>
                     <Badge variant={STATUS_VARIANT[detail.status] || 'muted'} className="capitalize">
@@ -193,7 +197,7 @@ export default function Incidents() {
                     <Globe2 className="w-3.5 h-3.5" />
                     Involved IP Addresses
                   </h3>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {detail.source_ips.map((ip, index) => (
                       <div key={index} className="bg-bg-tertiary border border-bg-border px-3.5 py-2.5 rounded-lg">
                         <IPAddress ip={ip} />

@@ -88,18 +88,20 @@ export default function EventDistribution() {
         </PieChart>
       </ResponsiveContainer>
 
-      {/* Custom Legend */}
+      {/* Custom Legend — gap-3 and a truncating label keep the event name off
+          the count when the card narrows; without it they render flush against
+          each other as e.g. "failed_login10". */}
       <div className="mt-4 space-y-2">
         {chartData.slice(0, 6).map((item, index) => (
-          <div key={item.name} className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
+          <div key={item.name} className="flex items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2 min-w-0">
               <div
-                className="w-3 h-3 rounded-full"
+                className="w-3 h-3 rounded-full shrink-0"
                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
               />
-              <span className="text-text-secondary">{item.name}</span>
+              <span className="text-text-secondary truncate" title={item.name}>{item.name}</span>
             </div>
-            <span className="font-mono text-text-primary">{item.value}</span>
+            <span className="font-mono text-text-primary tabular-nums shrink-0">{item.value}</span>
           </div>
         ))}
       </div>

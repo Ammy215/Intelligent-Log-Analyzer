@@ -70,9 +70,9 @@ export default function Billing() {
 
   return (
     <PageWrapper title="Billing" subtitle="Credit balance and top-ups">
-      <div className="grid grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Hero balance card */}
-        <div className="col-span-2 card p-7 relative overflow-hidden">
+        <div className="lg:col-span-2 card p-5 sm:p-7 relative overflow-hidden">
           <div
             className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-[0.07] pointer-events-none"
             style={{ background: 'radial-gradient(circle, #00d4ff 0%, transparent 70%)' }}
@@ -93,12 +93,12 @@ export default function Billing() {
             />
             <div className="h-full bg-accent-cyan flex-1 transition-all" />
           </div>
-          <div className="flex items-center gap-5 text-xs">
-            <span className="flex items-center gap-1.5 text-text-secondary">
-              <span className="w-2 h-2 rounded-full bg-accent-green" /> Free — {data.free_credits_remaining}
+          <div className="flex items-center gap-5 text-xs flex-wrap">
+            <span className="flex items-center gap-1.5 text-text-secondary whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-accent-green shrink-0" /> Free — {data.free_credits_remaining}
             </span>
-            <span className="flex items-center gap-1.5 text-text-secondary">
-              <span className="w-2 h-2 rounded-full bg-accent-cyan" /> Purchased — {data.purchased_credits}
+            <span className="flex items-center gap-1.5 text-text-secondary whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-accent-cyan shrink-0" /> Purchased — {data.purchased_credits}
             </span>
           </div>
         </div>
@@ -123,8 +123,8 @@ export default function Billing() {
       </div>
 
       {/* Purchased credits + top-up */}
-      <div className="grid grid-cols-3 gap-6">
-        <Card className="col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-accent-cyan/10 flex items-center justify-center">
               <Wallet className="w-4 h-4 text-accent-cyan" />
@@ -136,20 +136,20 @@ export default function Billing() {
         </Card>
 
         {/* Top-up plan card — the one deliberate accent-ring highlight on this page, since it's the primary CTA */}
-        <div className="col-span-2 card p-6 border-accent-cyan/25 shadow-elevated">
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex items-start gap-4">
+        <div className="lg:col-span-2 card p-5 sm:p-6 border-accent-cyan/25 shadow-elevated">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+            <div className="flex items-start gap-4 min-w-0">
               <div className="w-11 h-11 rounded-xl bg-accent-cyan/10 flex items-center justify-center shrink-0">
                 <Sparkles className="w-5 h-5 text-accent-cyan" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-text-primary mb-1">{CREDITS_PER_TOPUP} credit top-up</p>
                 <p className="text-xs text-text-secondary max-w-sm">
                   One-time purchase via Razorpay. Sandbox mode — no real charge is ever made. Admin-only.
                 </p>
               </div>
             </div>
-            <div className="text-right shrink-0">
+            <div className="sm:text-right shrink-0">
               <p className="text-2xl font-bold text-text-primary tabular-nums">₹{TOPUP_PRICE_INR}</p>
               <p className="text-xs text-text-muted">one-time</p>
             </div>

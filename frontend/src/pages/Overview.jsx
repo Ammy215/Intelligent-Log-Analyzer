@@ -51,7 +51,7 @@ export default function Overview() {
   if (summaryLoading) {
     return (
       <PageWrapper title="Overview" subtitle="Real-time security monitoring dashboard">
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[...Array(4)].map((_, i) => (
             <LoadingCard key={i} />
           ))}
@@ -127,7 +127,7 @@ export default function Overview() {
       subtitle="Real-time security monitoring dashboard"
     >
       {/* Metric Cards Row */}
-      <div className="grid grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         {metrics.map((metric, index) => (
           <MetricCard key={metric.title} {...metric} index={index} />
         ))}
@@ -138,15 +138,13 @@ export default function Overview() {
         <AttackTimeline />
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-3 gap-6 mb-6">
-        {/* Top Attackers - 2 columns */}
-        <div className="col-span-2">
+      {/* Two Column Layout — stacks below lg rather than crushing both charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 min-w-0">
           <TopAttackersChart topSources={topSources} />
         </div>
 
-        {/* Event Distribution - 1 column */}
-        <div className="col-span-1">
+        <div className="lg:col-span-1 min-w-0">
           <EventDistribution />
         </div>
       </div>

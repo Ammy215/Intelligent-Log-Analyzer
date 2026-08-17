@@ -24,7 +24,11 @@ export default function AIAnalyst() {
     queryFn: billingAPI.getCredits,
   })
 
-  const { mutate: generateReport, isLoading } = useMutation({
+  // isPending, not isLoading — react-query v5 dropped isLoading from
+  // useMutation. The spinner/disabled-button branches below read as
+  // undefined under the old name, so this page showed no feedback at all
+  // while a Gemini report was generating.
+  const { mutate: generateReport, isPending: isLoading } = useMutation({
     mutationFn: async () => {
       if (contextType === 'incident') {
         return reportsAPI.generateIncidentReport(contextValue)
@@ -88,9 +92,9 @@ export default function AIAnalyst() {
       title="AI Analyst"
       subtitle="Automated threat analysis and reporting"
     >
-      <div className="grid grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Context Selector */}
-        <div className="col-span-1 card p-6">
+        <div className="lg:col-span-1 card p-4 sm:p-6 min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Brain className="w-5 h-5 text-accent-purple" />
@@ -201,7 +205,7 @@ export default function AIAnalyst() {
         </div>
 
         {/* Chat Interface */}
-        <div className="col-span-3 card p-6 flex flex-col h-[700px]">
+        <div className="lg:col-span-3 card p-4 sm:p-6 flex flex-col h-[560px] lg:h-[700px] min-w-0">
           <h3 className="font-semibold mb-4">AI Analysis</h3>
 
           {/* Messages */}

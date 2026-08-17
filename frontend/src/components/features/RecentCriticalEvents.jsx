@@ -38,7 +38,7 @@ export default function RecentCriticalEvents({ logs = [], isLoading }) {
     <div className="card p-6">
       <h3 className="label-eyebrow mb-5">Recent Critical Events</h3>
       <div className="overflow-x-auto -mx-6">
-        <table className="w-full">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="border-b border-bg-border text-left">
               <th className="py-2.5 px-6 text-text-muted text-[11px] font-semibold uppercase tracking-wider">Timestamp</th>
@@ -73,7 +73,10 @@ export default function RecentCriticalEvents({ logs = [], isLoading }) {
                       countryName={log.geo.country}
                     />
                   ) : (
-                    <span className="text-text-muted text-sm">N/A</span>
+                    // Em-dash rather than literal "N/A": a column of repeated
+                    // "N/A" reads as a broken pipeline, a muted dash reads as
+                    // "nothing here", which is what it actually means.
+                    <span className="text-text-muted select-none" title="Not enriched">—</span>
                   )}
                 </td>
                 <td className="py-3 px-4">
