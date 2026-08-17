@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Gift, Wallet, Sparkles, ArrowRight, ShieldAlert } from 'lucide-react'
-import { billingAPI } from '@/lib/api'
+import { Gift, Wallet, Sparkles, ArrowRight, ShieldAlert, Receipt, Lock } from 'lucide-react'
+import { billingAPI, adminAPI } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 import PageWrapper from '@/components/layout/PageWrapper'
 import LoadingState from '@/components/shared/LoadingState'
 import ErrorState from '@/components/shared/ErrorState'
 import Button from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { formatTimestamp } from '@/lib/utils'
 
 const CREDITS_PER_TOPUP = 100
 const TOPUP_PRICE_INR = 500
@@ -18,9 +20,135 @@ function formatPeriod(period) {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
+// The ledger stores raw reason strings written by whatever created the row
+// (webhook, superadmin adjustment). Render them as something a person reads
+// rather than leaking the internal token.
+function describeReason(reason) {
+  if (!reason) return 'Credit adjustment'
+  if (reason.startsWith('superadmin_adjustment:')) {
+    const note = reason.split(':').slice(1).join(':').trim()
+    return note ? `Manual adjustment — ${note}` : 'Manual adjustment'
+  }
+  if (reason === 'razorpay_topup' || reason.includes('topup')) return `${CREDITS_PER_TOPUP} credit top-up`
+  return reason.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
+}
+
+function TransactionHistory({ isAdmin }) {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['admin-credits-ledger'],
+    queryFn: adminAPI.getCreditsLedger,
+    // The ledger endpoint is admin-only server-side; don't fire a request
+    // that can only come back 403.
+    enabled: isAdmin,
+  })
+
+  if (!isAdmin) {
+    return (
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-bg-tertiary flex items-center justify-center">
+            <Lock className="w-4 h-4 text-text-muted" />
+          </div>
+          <p className="label-eyebrow">Payment history</p>
+        </div>
+        <p className="text-sm text-text-secondary">
+          Only organization admins can view billing history and purchase credits. Your balance above
+          is shared across the whole team.
+        </p>
+      </Card>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <p className="label-eyebrow mb-4">Payment history</p>
+        <LoadingState />
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <p className="label-eyebrow mb-4">Payment history</p>
+        <ErrorState error={error} onRetry={refetch} />
+      </Card>
+    )
+  }
+
+  const ledger = data?.ledger || []
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-accent-purple/10 flex items-center justify-center">
+            <Receipt className="w-4 h-4 text-accent-purple" />
+          </div>
+          <p className="label-eyebrow">Payment history</p>
+        </div>
+        {ledger.length > 0 && (
+          <span className="text-xs text-text-muted tabular-nums">
+            {ledger.length} {ledger.length === 1 ? 'transaction' : 'transactions'}
+          </span>
+        )}
+      </div>
+
+      {ledger.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-bg-border px-6 py-10 text-center">
+          <div className="w-11 h-11 rounded-full bg-bg-tertiary flex items-center justify-center mx-auto mb-3">
+            <Receipt className="w-5 h-5 text-text-muted" />
+          </div>
+          <p className="text-sm text-text-primary mb-1">No purchases yet</p>
+          <p className="text-xs text-text-muted max-w-xs mx-auto leading-relaxed">
+            You're running on the monthly free allowance. Any credits you buy will show up here with
+            their payment reference.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto -mx-6 px-6">
+          <table className="w-full min-w-[560px]">
+            <thead>
+              <tr className="border-b border-bg-border text-left">
+                <th className="py-2.5 pr-4 text-text-muted text-[11px] font-semibold uppercase tracking-wider">Date</th>
+                <th className="py-2.5 px-4 text-text-muted text-[11px] font-semibold uppercase tracking-wider">Description</th>
+                <th className="py-2.5 px-4 text-text-muted text-[11px] font-semibold uppercase tracking-wider">Reference</th>
+                <th className="py-2.5 pl-4 text-text-muted text-[11px] font-semibold uppercase tracking-wider text-right">Credits</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledger.map((row) => (
+                <tr key={row.id} className="border-b border-bg-border last:border-0">
+                  <td className="py-3 pr-4 text-xs font-mono text-text-secondary whitespace-nowrap">
+                    {formatTimestamp(row.created_at)}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-text-primary">{describeReason(row.reason)}</td>
+                  <td className="py-3 px-4 text-xs font-mono text-text-muted">
+                    {row.razorpay_payment_id || <span title="No payment reference — not a card purchase">—</span>}
+                  </td>
+                  <td
+                    className={`py-3 pl-4 text-sm font-mono text-right tabular-nums ${
+                      row.delta >= 0 ? 'text-accent-green' : 'text-accent-red'
+                    }`}
+                  >
+                    {row.delta >= 0 ? `+${row.delta}` : row.delta}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export default function Billing() {
+  const { user } = useAuth()
   const [checkoutError, setCheckoutError] = useState('')
   const [checkingOut, setCheckingOut] = useState(false)
+  const isAdmin = user?.role === 'admin'
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['billing-credits'],
@@ -123,7 +251,7 @@ export default function Billing() {
       </div>
 
       {/* Purchased credits + top-up */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <Card className="lg:col-span-1">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-accent-cyan/10 flex items-center justify-center">
@@ -168,6 +296,10 @@ export default function Billing() {
           </Button>
         </div>
       </div>
+
+      {/* Payment history — the data existed on the Admin page but never
+          appeared where someone looking at billing would go for it. */}
+      <TransactionHistory isAdmin={isAdmin} />
     </PageWrapper>
   )
 }

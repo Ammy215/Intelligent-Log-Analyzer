@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Shield, UserPlus } from 'lucide-react'
+import { UserPlus, MailCheck } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { Card } from '@/components/ui/Card'
+import AuthLayout from '@/components/layout/AuthLayout'
 import Button from '@/components/ui/Button'
 import PasswordInput from '@/components/ui/PasswordInput'
 
@@ -31,101 +31,109 @@ export default function Signup() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-full bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center mb-4">
-            <Shield className="w-6 h-6 text-accent-cyan" />
+  if (result) {
+    return (
+      <AuthLayout>
+        <div className="text-center">
+          <div className="w-14 h-14 rounded-full bg-accent-green/10 border border-accent-green/25 flex items-center justify-center mx-auto mb-5">
+            <MailCheck className="w-6 h-6 text-accent-green" />
           </div>
-          <h1 className="text-lg font-semibold">Log Analyzer</h1>
-          <p className="label-eyebrow mt-1">Security Operations</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">Check your inbox</h2>
+          <p className="text-sm text-text-secondary mb-7 leading-relaxed">
+            {result.message || `We sent a confirmation link to ${email}. Click it to activate your account, then sign in.`}
+          </p>
+          <Link to="/login" className="block">
+            <Button className="w-full">Go to sign in</Button>
+          </Link>
+        </div>
+      </AuthLayout>
+    )
+  }
+
+  return (
+    <AuthLayout>
+      <div className="mb-7">
+        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Create your workspace</h2>
+        <p className="text-sm text-text-secondary mt-1.5">
+          You'll be the first member, with full access to invite and manage the rest of your team.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-lg px-3 py-2.5">
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="fullName" className="text-sm text-text-secondary mb-1.5 block">Your name</label>
+          <input
+            id="fullName"
+            type="text"
+            className="input w-full"
+            placeholder="Alex Rivera"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            autoComplete="name"
+          />
         </div>
 
-        {result ? (
-          <Card className="space-y-4 text-center">
-            <h2 className="text-xl font-semibold">Account created</h2>
-            <p className="text-sm text-text-secondary">{result.message}</p>
-            <Link to="/login">
-              <Button className="w-full">Go to sign in</Button>
-            </Link>
-          </Card>
-        ) : (
-          <Card className="space-y-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="mb-1">
-                <h2 className="text-xl font-semibold">Create an account</h2>
-                <p className="text-sm text-text-secondary mt-1">
-                  This creates a new organization with you as admin.
-                </p>
-              </div>
+        <div>
+          <label htmlFor="orgName" className="text-sm text-text-secondary mb-1.5 block">
+            Team or company name
+          </label>
+          <input
+            id="orgName"
+            type="text"
+            className="input w-full"
+            placeholder="Acme Security"
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+          />
+          <p className="text-xs text-text-muted mt-1.5">
+            This is the workspace your logs and teammates live in. You can leave it blank and rename it later.
+          </p>
+        </div>
 
-              {error && (
-                <div className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-lg px-3 py-2">
-                  {error}
-                </div>
-              )}
+        <div>
+          <label htmlFor="email" className="text-sm text-text-secondary mb-1.5 block">Work email</label>
+          <input
+            id="email"
+            type="email"
+            required
+            className="input w-full"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        </div>
 
-              <div>
-                <label className="text-sm text-text-secondary mb-1 block">Full name</label>
-                <input
-                  type="text"
-                  className="input w-full"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  autoComplete="name"
-                />
-              </div>
+        <div>
+          <label htmlFor="password" className="text-sm text-text-secondary mb-1.5 block">Password</label>
+          <PasswordInput
+            id="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <p className="text-xs text-text-muted mt-1.5">At least 8 characters.</p>
+        </div>
 
-              <div>
-                <label className="text-sm text-text-secondary mb-1 block">Organization name</label>
-                <input
-                  type="text"
-                  className="input w-full"
-                  placeholder="Defaults to your name's Organization"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                />
-              </div>
+        <Button type="submit" disabled={submitting} className="w-full disabled:opacity-50">
+          <UserPlus className="w-4 h-4" />
+          {submitting ? 'Creating your workspace…' : 'Create workspace'}
+        </Button>
+      </form>
 
-              <div>
-                <label className="text-sm text-text-secondary mb-1 block">Email</label>
-                <input
-                  type="email"
-                  required
-                  className="input w-full"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-text-secondary mb-1 block">Password</label>
-                <PasswordInput
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-
-              <Button type="submit" disabled={submitting} className="w-full disabled:opacity-50">
-                <UserPlus className="w-4 h-4" />
-                {submitting ? 'Creating account…' : 'Create account'}
-              </Button>
-
-              <p className="text-sm text-text-secondary text-center pt-1">
-                Already have an account?{' '}
-                <Link to="/login" className="text-accent-cyan hover:underline">
-                  Sign in
-                </Link>
-              </p>
-            </form>
-          </Card>
-        )}
-      </div>
-    </div>
+      <p className="text-sm text-text-secondary text-center mt-6">
+        Already have an account?{' '}
+        <Link to="/login" className="text-accent-cyan hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

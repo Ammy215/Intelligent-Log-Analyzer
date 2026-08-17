@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Shield, KeyRound } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { authAPI } from '@/lib/api'
-import { Card } from '@/components/ui/Card'
+import AuthLayout from '@/components/layout/AuthLayout'
 import Button from '@/components/ui/Button'
 import PasswordInput from '@/components/ui/PasswordInput'
 
@@ -59,75 +59,86 @@ export default function SetPassword() {
     }
   }
 
+  if (missing) {
+    return (
+      <AuthLayout>
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">
+            This link has expired
+          </h2>
+          <p className="text-sm text-text-secondary mb-7 leading-relaxed">
+            Password links can only be used once. Open the most recent invite or reset email, or
+            ask an admin to send you a new one.
+          </p>
+          <Link to="/login" className="block">
+            <Button className="w-full">Back to sign in</Button>
+          </Link>
+        </div>
+      </AuthLayout>
+    )
+  }
+
+  if (done) {
+    return (
+      <AuthLayout>
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">
+            Password set
+          </h2>
+          <p className="text-sm text-text-secondary">Taking you to sign in…</p>
+        </div>
+      </AuthLayout>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-full bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center mb-4">
-            <Shield className="w-6 h-6 text-accent-cyan" />
+    <AuthLayout>
+      <div className="mb-7">
+        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">
+          {linkType === 'recovery' ? 'Reset your password' : 'Set your password'}
+        </h2>
+        <p className="text-sm text-text-secondary mt-1.5">
+          Pick something you don't use anywhere else.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-lg px-3 py-2.5">
+            {error}
           </div>
-          <h1 className="text-lg font-semibold">Log Analyzer</h1>
-          <p className="label-eyebrow mt-1">Security Operations</p>
+        )}
+
+        <div>
+          <label htmlFor="new-password" className="text-sm text-text-secondary mb-1.5 block">New password</label>
+          <PasswordInput
+            id="new-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <p className="text-xs text-text-muted mt-1.5">At least 8 characters.</p>
         </div>
 
-        {missing ? (
-          <Card className="space-y-4 text-center">
-            <h2 className="text-xl font-semibold">Link expired or invalid</h2>
-            <p className="text-sm text-text-secondary">
-              Open this page from the link in your invite or password-reset email.
-            </p>
-            <Link to="/login">
-              <Button className="w-full">Back to sign in</Button>
-            </Link>
-          </Card>
-        ) : done ? (
-          <Card className="space-y-4 text-center">
-            <h2 className="text-xl font-semibold">Password set</h2>
-            <p className="text-sm text-text-secondary">Redirecting you to sign in…</p>
-          </Card>
-        ) : (
-          <Card>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <h2 className="text-xl font-semibold mb-1">
-              {linkType === 'recovery' ? 'Reset your password' : 'Set your password'}
-            </h2>
+        <div>
+          <label htmlFor="confirm-password" className="text-sm text-text-secondary mb-1.5 block">Confirm password</label>
+          <PasswordInput
+            id="confirm-password"
+            required
+            minLength={8}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
 
-            {error && (
-              <div className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-lg px-3 py-2">
-                {error}
-              </div>
-            )}
-
-            <div>
-              <label className="text-sm text-text-secondary mb-1 block">New password</label>
-              <PasswordInput
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-text-secondary mb-1 block">Confirm password</label>
-              <PasswordInput
-                required
-                minLength={8}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-
-            <Button type="submit" disabled={submitting} className="w-full disabled:opacity-50">
-              <KeyRound className="w-4 h-4" />
-              {submitting ? 'Setting password…' : 'Set password'}
-            </Button>
-          </form>
-          </Card>
-        )}
-      </div>
-    </div>
+        <Button type="submit" disabled={submitting} className="w-full disabled:opacity-50">
+          <KeyRound className="w-4 h-4" />
+          {submitting ? 'Setting password…' : 'Set password'}
+        </Button>
+      </form>
+    </AuthLayout>
   )
 }
