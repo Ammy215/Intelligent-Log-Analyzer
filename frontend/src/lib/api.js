@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { API_BASE_URL } from './constants'
+import { API_BASE_URL, API_ORIGIN } from './constants'
 import { getToken, clearSession } from './auth'
 
 // Create axios instance with default config
@@ -310,8 +310,10 @@ export const superadminAPI = {
 export const healthAPI = {
   // Check API health
   checkHealth: async () => {
+    // /health sits outside the /api/v1 prefix, so it overrides baseURL with
+    // the bare origin rather than hardcoding a host.
     const response = await api.get('/health', {
-      baseURL: 'http://localhost:8000',
+      baseURL: API_ORIGIN,
     })
     return response.data
   },

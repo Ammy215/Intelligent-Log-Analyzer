@@ -107,11 +107,17 @@ app.add_middleware(
 # Root endpoint
 @app.get("/")
 async def root() -> dict:
-    """Root endpoint with API information."""
+    """Root endpoint with API information.
+
+    `docs` reflects the actual state rather than always claiming "/docs":
+    in production that route is disabled, and advertising a 404 as the
+    documentation URL is just a wrong answer.
+    """
     return {
         "name": "Intelligent Log Analyzer API",
         "version": "1.0.0",
-        "docs": "/docs",
+        "environment": "production" if _is_production else "development",
+        "docs": None if _is_production else "/docs",
         "health": "/health",
     }
 

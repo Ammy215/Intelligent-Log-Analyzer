@@ -26,13 +26,18 @@ class Settings(BaseSettings):
     app_host: str = "0.0.0.0"
     app_port: int = 8000
     debug: bool = True
-    secret_key: str = "replace_with_random_64_char_string"
-    allowed_origins: str = "http://localhost:8501,http://localhost:3000,http://localhost:5173"
+    # No secret_key field: this app verifies Supabase-issued tokens via a
+    # public JWKS endpoint (ES256), so there is no shared secret to hold.
+    # The setting existed with zero consumers and told deployers to generate
+    # a 64-char secret that did nothing.
+    allowed_origins: str = "http://localhost:3000,http://localhost:5173"
     # Defaults to dev so /docs and /openapi.json stay on locally with no
-    # extra setup — a real deploy sets ENVIRONMENT=production, which turns
-    # them off (see main.py). Not a secrecy measure (the routes themselves
-    # are still reachable and still auth-gated), just not advertising the
-    # full API surface/schema to anyone who finds the URL.
+    # extra setup — a real deploy MUST set ENVIRONMENT=production explicitly,
+    # which turns them off (see main.py). Note the default is the permissive
+    # one: a deploy that forgets this variable silently exposes /docs,
+    # /redoc and /openapi.json. It is documented as required in .env.example
+    # for that reason. Not a secrecy measure (routes stay auth-gated), just
+    # not advertising the full API surface to anyone who finds the URL.
     environment: str = "development"
 
     # ── Threat Intelligence ──────────────────────────
@@ -54,11 +59,12 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
 
     # ── AI ───────────────────────────────────────────
-    # Switched from OpenAI to Gemini: no permanent free tier on OpenAI,
-    # Gemini's free tier needs no card on file — matters for a portfolio
-    # project meant to stay free to run indefinitely.
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    # Gemini is the only AI provider. Switched from OpenAI: no permanent
+    # free tier there, Gemini's needs no card on file — matters for a
+    # portfolio project meant to stay free to run indefinitely. The OpenAI
+    # settings are gone along with the client that read them; it had been
+    # left at a placeholder key, which silently downgraded reports to
+    # hardcoded mock text rather than failing.
     gemini_api_key: str = ""
     gemini_model: str = "gemini-flash-latest"
     max_tokens: int = 2000
@@ -71,9 +77,10 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_service_key: str = ""
 
-    # ── Dashboard ────────────────────────────────────
-    streamlit_server_port: int = 8501
-    api_base_url: str = "http://localhost:8000/api/v1"
+    # No streamlit_server_port / api_base_url: the Streamlit dashboard was
+    # removed in Phase 0, and the frontend resolves its own backend URL from
+    # VITE_API_URL at build time (frontend/src/lib/constants.js). Both had
+    # zero consumers here.
 
     # ── App Settings ─────────────────────────────────
     log_level: str = "INFO"

@@ -77,8 +77,25 @@ export const STATUS_COLORS = {
   },
 }
 
-// API configuration
-export const API_BASE_URL = 'http://localhost:8000/api/v1'
+// API configuration.
+//
+// The backend origin is environment-driven (VITE_API_URL) so a deployed build
+// can be pointed at a real backend by setting an env var at build time —
+// previously this was a hardcoded localhost, which meant a deployed frontend
+// called the *visitor's* own machine and the app was simply broken in prod.
+//
+// Falls back to the local dev backend when unset, so local development and
+// `npm run dev` keep working with no frontend .env file at all.
+//
+// Set this to the backend ORIGIN only (e.g. https://api.example.com) — the
+// /api/v1 prefix is appended here, and the bare origin is exported separately
+// for the few routes that sit outside that prefix (/health).
+// Vite inlines import.meta.env at build time, so this is baked into the
+// bundle — it is NOT read at runtime; rebuild to change it.
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
+
+export { API_ORIGIN }
+export const API_BASE_URL = `${API_ORIGIN}/api/v1`
 
 // Chart colors
 export const CHART_COLORS = {

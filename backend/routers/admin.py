@@ -5,13 +5,14 @@ admin-scoped RLS policy (detection_rules, audit_logs), the caller's own
 JWT is used (not the service role) so Postgres enforces the same rule a
 second time. Not just a hidden button in the frontend.
 """
+import asyncio
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from audit import log_action
-from billing.credits import get_org_credits
+from billing.credits import get_org_credits_with_ledger
 from db.supabase import SupabaseError, rest_select, rest_update
 from middleware.auth import CurrentUser
 from middleware.rbac import require_role
@@ -44,24 +45,29 @@ async def list_members(user: CurrentUser = Depends(require_role("admin"))) -> di
 async def list_audit_log(user: CurrentUser = Depends(require_role("admin"))) -> dict:
     """Recent audit log entries for this org, newest first."""
     try:
-        rows = await rest_select(
-            "audit_logs",
-            {
-                "select": "id,actor_id,action,ip_address,user_agent,created_at",
-                "org_id": f"eq.{user.org_id}",
-                "order": "created_at.desc",
-                "limit": "200",
-            },
-            user_token=user.access_token,
-        )
-
         # Resolve actor_id -> a human identity. One extra query for the whole
         # org, not one per row: the UI otherwise had to render a raw UUID
         # fragment, which tells an admin reading their own audit log nothing.
-        profiles = await rest_select(
-            "user_profiles",
-            {"select": "id,full_name,email", "org_id": f"eq.{user.org_id}"},
-            user_token=user.access_token,
+        #
+        # Gathered, not awaited in sequence: neither query feeds the other,
+        # and a Supabase round trip is ~200ms, so running them back to back
+        # made this endpoint pay that twice (~500ms measured) for no reason.
+        rows, profiles = await asyncio.gather(
+            rest_select(
+                "audit_logs",
+                {
+                    "select": "id,actor_id,action,ip_address,user_agent,created_at",
+                    "org_id": f"eq.{user.org_id}",
+                    "order": "created_at.desc",
+                    "limit": "200",
+                },
+                user_token=user.access_token,
+            ),
+            rest_select(
+                "user_profiles",
+                {"select": "id,full_name,email", "org_id": f"eq.{user.org_id}"},
+                user_token=user.access_token,
+            ),
         )
     except SupabaseError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
@@ -141,15 +147,13 @@ async def credits_ledger(user: CurrentUser = Depends(require_role("admin"))) -> 
     """Current balance breakdown (free vs. purchased) plus the raw
     purchased-credit ledger history."""
     try:
-        balance = await get_org_credits(user.org_id, user.access_token)
-        ledger_rows = await rest_select(
-            "credits_ledger",
-            {
-                "select": "id,delta,reason,razorpay_payment_id,created_at",
-                "org_id": f"eq.{user.org_id}",
-                "order": "created_at.desc",
-            },
-            user_token=user.access_token,
+        # One helper, two parallel round trips. This used to call
+        # get_org_credits() (which itself read credits_ledger) and then read
+        # credits_ledger again for the fuller column set — three sequential
+        # Supabase calls where two parallel ones do, since the second read's
+        # columns are a superset of the first's.
+        balance, ledger_rows = await get_org_credits_with_ledger(
+            user.org_id, user.access_token
         )
     except SupabaseError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

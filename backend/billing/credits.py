@@ -9,8 +9,10 @@ then. A stale reset always sets free_credits_remaining to exactly
 FREE_CREDITS_PER_MONTH — never adds to whatever was left, so unused free
 credits don't roll over. Purchased credits are never touched by this.
 """
+import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from db.supabase import rest_insert, rest_select, rest_update
 
@@ -43,12 +45,80 @@ async def get_org_credits(org_id: str, user_token: str = None, use_service_role:
     an org the caller isn't a member of); every normal in-org call keeps
     using the caller's own token, same as before.
     """
-    org_rows = await rest_select(
+    # The org row and the ledger are independent reads, so they're gathered
+    # rather than awaited back to back — each Supabase round trip is ~200ms,
+    # and running them in sequence doubled this call's latency for nothing.
+    # Only the lazy reset below depends on the org row, so it stays after.
+    org_rows, ledger_rows = await asyncio.gather(
+        _select_org_row(org_id, user_token, use_service_role),
+        _select_ledger(org_id, user_token, use_service_role, "delta"),
+    )
+    current_period, free_remaining = await _apply_lazy_reset(org_id, org_rows)
+    purchased_credits = sum(row["delta"] for row in ledger_rows)
+
+    return {
+        "period": current_period,
+        "free_credits_remaining": free_remaining,
+        "purchased_credits": purchased_credits,
+        "total_available": free_remaining + purchased_credits,
+    }
+
+
+async def get_org_credits_with_ledger(
+    org_id: str, user_token: str = None, use_service_role: bool = False
+) -> tuple[dict, list]:
+    """Balance plus the full ledger rows, in the same two parallel round
+    trips the balance alone costs.
+
+    The admin ledger view needs both. Calling get_org_credits() and then
+    selecting credits_ledger separately read that table twice — and the
+    second read's columns are a superset of the first's, so the balance can
+    be computed from it directly instead.
+    """
+    org_rows, ledger_rows = await asyncio.gather(
+        _select_org_row(org_id, user_token, use_service_role),
+        _select_ledger(
+            org_id, user_token, use_service_role,
+            "id,delta,reason,razorpay_payment_id,created_at",
+            order="created_at.desc",
+        ),
+    )
+    current_period, free_remaining = await _apply_lazy_reset(org_id, org_rows)
+    purchased_credits = sum(row["delta"] for row in ledger_rows)
+
+    balance = {
+        "period": current_period,
+        "free_credits_remaining": free_remaining,
+        "purchased_credits": purchased_credits,
+        "total_available": free_remaining + purchased_credits,
+    }
+    return balance, ledger_rows
+
+
+async def _select_org_row(org_id: str, user_token: Optional[str], use_service_role: bool) -> list:
+    return await rest_select(
         "organizations",
         {"select": "id,credits_current_period,free_credits_remaining", "id": f"eq.{org_id}"},
         user_token=user_token,
         use_service_role=use_service_role,
     )
+
+
+async def _select_ledger(
+    org_id: str, user_token: Optional[str], use_service_role: bool,
+    select: str, order: Optional[str] = None,
+) -> list:
+    params = {"select": select, "org_id": f"eq.{org_id}"}
+    if order:
+        params["order"] = order
+    return await rest_select(
+        "credits_ledger", params, user_token=user_token, use_service_role=use_service_role
+    )
+
+
+async def _apply_lazy_reset(org_id: str, org_rows: list) -> tuple[str, int]:
+    """Reset the free allowance if the stored period is stale. Returns
+    (current_period, free_credits_remaining)."""
     if not org_rows:
         raise ValueError(f"Org {org_id} not found")
     org = org_rows[0]
@@ -70,20 +140,7 @@ async def get_org_credits(org_id: str, user_token: str = None, use_service_role:
             f"free_credits_remaining -> {free_remaining}"
         )
 
-    ledger_rows = await rest_select(
-        "credits_ledger",
-        {"select": "delta", "org_id": f"eq.{org_id}"},
-        user_token=user_token,
-        use_service_role=use_service_role,
-    )
-    purchased_credits = sum(row["delta"] for row in ledger_rows)
-
-    return {
-        "period": current_period,
-        "free_credits_remaining": free_remaining,
-        "purchased_credits": purchased_credits,
-        "total_available": free_remaining + purchased_credits,
-    }
+    return current_period, free_remaining
 
 
 async def spend_credit(org_id: str, user_token: str, reason: str) -> dict:
