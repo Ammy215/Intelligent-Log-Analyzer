@@ -66,31 +66,78 @@ details, IPs, or timestamps not present in the data. Keep it professional
 and suitable for stakeholder communication."""
 
 
+def _is_capacity_error(exc: APIError) -> bool:
+    """True for 'this model can't serve you right now' — as opposed to a bad
+    request, a bad key, or a missing model, none of which another model
+    would fix. 503 UNAVAILABLE is the sustained high-demand case that took
+    every report endpoint down; 429 RESOURCE_EXHAUSTED is per-model quota.
+    Only these are worth retrying elsewhere.
+    """
+    code = getattr(exc, "code", None)
+    if code in (429, 503):
+        return True
+    text = str(exc).upper()
+    return "UNAVAILABLE" in text or "RESOURCE_EXHAUSTED" in text
+
+
+def _model_chain() -> list[str]:
+    """Primary model, then the fallback if one is configured and distinct."""
+    chain = [settings.gemini_model]
+    fallback = (settings.gemini_fallback_model or "").strip()
+    if fallback and fallback not in chain:
+        chain.append(fallback)
+    return chain
+
+
 async def _generate(prompt: str) -> str:
-    """Single call path for every report type. Raises GeminiError on any
-    failure rather than returning placeholder text — callers must not
-    deduct a credit, or present output as analysis, unless this returns."""
+    """Single call path for every report type.
+
+    Tries the primary model, and on a capacity failure only (503/429) falls
+    back to the secondary. Raises GeminiError on any other failure, and when
+    every model in the chain is exhausted — never returns placeholder text,
+    so callers must not deduct a credit or present output as analysis unless
+    this returns successfully.
+    """
     if not settings.gemini_api_key:
         raise GeminiError("GEMINI_API_KEY is not configured")
 
     client = _get_client()
+    chain = _model_chain()
+    last_capacity_error: str | None = None
 
-    try:
-        response = await client.aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=prompt,
-        )
-    except APIError as e:
-        logger.error(f"Gemini API error: {e}")
-        raise GeminiError(str(e))
-    except Exception as e:
-        logger.error(f"Gemini request failed: {e}")
-        raise GeminiError(str(e))
+    for index, model in enumerate(chain):
+        is_last = index == len(chain) - 1
+        try:
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=prompt,
+            )
+        except APIError as e:
+            if _is_capacity_error(e) and not is_last:
+                logger.warning(
+                    f"Gemini model {model!r} unavailable ({getattr(e, 'code', '?')}), "
+                    f"falling back to {chain[index + 1]!r}"
+                )
+                last_capacity_error = str(e)
+                continue
+            logger.error(f"Gemini API error on {model!r}: {e}")
+            raise GeminiError(
+                f"{e} (after trying {', '.join(chain[:index + 1])})"
+                if last_capacity_error
+                else str(e)
+            )
+        except Exception as e:
+            logger.error(f"Gemini request failed on {model!r}: {e}")
+            raise GeminiError(str(e))
 
-    text = getattr(response, "text", None)
-    if not text:
-        raise GeminiError("Gemini returned an empty response")
-    return text
+        text = getattr(response, "text", None)
+        if not text:
+            raise GeminiError(f"Gemini model {model!r} returned an empty response")
+        if index > 0:
+            logger.info(f"Gemini report served by fallback model {model!r}")
+        return text
+
+    raise GeminiError(last_capacity_error or "No Gemini model available")
 
 
 async def generate_incident_report(incident: dict) -> str:

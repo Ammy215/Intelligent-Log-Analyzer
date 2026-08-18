@@ -472,3 +472,57 @@ above: not dead code, not a deletion candidate, just not wired to any UI
 yet. Worth remembering before assuming either one is safe to remove, or
 assuming it's actually reachable from the live product today.
 
+Both now run on Gemini like every other report path. They previously used
+a separate OpenAI client that returned hardcoded mock text when its key was
+unset — which it was — so triggering either directly produced fabricated
+output presented as real analysis. That client is gone entirely.
+
+---
+
+## Known limitation: unpatched starlette CVEs (blocked on a FastAPI upgrade)
+
+Found by `pip-audit` during the pre-deploy audit. **Not fixed, deliberately
+deferred** — recorded here so it is a known accepted risk rather than an
+unknown one.
+
+**The finding:** 7 known vulnerabilities, all in `starlette 0.52.1`, which
+is a transitive dependency (FastAPI pulls it in; it is not listed in
+`requirements.txt` directly).
+
+| Advisory | Fixed in |
+|---|---|
+| PYSEC-2026-161 | starlette 1.0.1 |
+| PYSEC-2026-2280 | starlette 1.1.0 |
+| PYSEC-2026-2281 | starlette 1.1.0 |
+| PYSEC-2026-248 | starlette 1.3.0 |
+| PYSEC-2026-249 | starlette 1.3.1 |
+
+**Why it can't simply be patched:** every fix version is `>= 1.0.1`, but
+the pinned `fastapi==0.131.0` declares `starlette<1.0.0,>=0.40.0`. No
+version of starlette satisfies both the fix and FastAPI's constraint, so
+`pip install -U starlette` cannot resolve it — the pin has to move first.
+
+**The actual upgrade path:** `fastapi 0.141.1` relaxes the requirement to
+`starlette>=0.46.0` (no upper bound), which permits `starlette>=1.3.1` and
+clears all seven. That means the fix is a **FastAPI 0.131.0 → 0.141.1 jump
+(10 minor versions)**, not a patch bump — it wants its own branch and a
+full regression pass over auth, middleware ordering (the rate-limit/CORS
+ordering in `main.py` depends on Starlette middleware semantics), and the
+request/response lifecycle, which is why it was not bundled into a
+pre-deploy fix pass.
+
+**Scope when this is picked up:**
+- Bump `fastapi` to `0.141.1` and pin `starlette>=1.3.1` explicitly in
+  `requirements.txt` so the transitive version is no longer incidental.
+- Re-verify the middleware registration order in `main.py` still yields
+  CORS *outside* the rate limiter — Starlette 1.x is a major version and
+  this behaviour is load-bearing (a 429 that loses its CORS headers reads
+  in the browser as an opaque CORS failure, not a rate limit).
+- Re-run `pip-audit` to confirm zero remaining, and the full endpoint
+  regression sweep.
+
+**Note on npm:** the frontend's 2 outstanding advisories (`esbuild`
+moderate, `vite` high) are the same shape — fixable only via a breaking
+`vite 5 → 8` major. Both are dev-server-only issues and the deployed
+artifact is static files, so they are not production-runtime exposure.
+

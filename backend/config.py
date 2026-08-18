@@ -66,7 +66,16 @@ class Settings(BaseSettings):
     # left at a placeholder key, which silently downgraded reports to
     # hardcoded mock text rather than failing.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-flash-latest"
+    # Primary is flash-LITE, not flash: gemini-flash-latest was returning a
+    # sustained 503 "this model is currently experiencing high demand" —
+    # Google-side capacity, not a key/quota problem, since flash-lite served
+    # the identical request on the same key throughout. That 503 made every
+    # report endpoint fail in practice, so the proven-available model leads.
+    gemini_model: str = "gemini-flash-lite-latest"
+    # Tried only when the primary reports a capacity failure (503/429), so a
+    # future saturation of flash-lite doesn't take reports down the way
+    # flash-latest's did. Set empty to disable failover entirely.
+    gemini_fallback_model: str = "gemini-flash-latest"
     max_tokens: int = 2000
 
     # ── Supabase (Auth + Postgres) ─────────────────────
