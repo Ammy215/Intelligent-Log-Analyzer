@@ -68,21 +68,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware for dashboard communication
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 # Global rate limit — 200/15min per IP, the ceiling behind every more
 # specific per-category limit (auth/ingest/AI analyst) applied at the
 # router level. Scoped to /api/v1 only — /docs, /openapi.json, and /health
 # stay unlimited (dev tooling and uptime checks, not attacker-reachable
 # expensive operations).
+#
+# ORDER MATTERS, and it is the opposite of how it reads. Starlette's
+# add_middleware inserts at position 0, so whatever is registered LAST runs
+# OUTERMOST. This block is deliberately above the CORS registration below so
+# that CORS ends up outside the limiter: a 429 raised here short-circuits
+# before the route, and if CORS were inner it would never get to attach
+# Access-Control-Allow-Origin. The browser then reports a rate-limited
+# request as an opaque CORS failure instead of a 429, and the app looks
+# broken rather than throttled. Registering CORS last also lets it answer
+# preflight OPTIONS itself, so preflights no longer burn quota.
 @app.middleware("http")
 async def _global_rate_limit_middleware(request: Request, call_next):
     if request.url.path.startswith("/api/v1"):
@@ -91,6 +91,17 @@ async def _global_rate_limit_middleware(request: Request, call_next):
         except HTTPException as e:
             return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
     return await call_next(request)
+
+
+# CORS middleware for dashboard communication. Registered last on purpose —
+# see the ordering note above.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Root endpoint
