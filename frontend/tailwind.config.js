@@ -22,7 +22,7 @@ export default {
           green: '#00ff88',
           amber: '#ffb800',
           red: '#ff3366',
-          purple: '#8b5cf6',
+          purple: '#9c74f7',
           info: '#5b8cff',
         },
         text: {

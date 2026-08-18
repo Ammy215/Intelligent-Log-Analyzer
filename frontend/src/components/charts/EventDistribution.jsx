@@ -6,7 +6,7 @@ import LoadingState from '@/components/shared/LoadingState'
 import ErrorState from '@/components/shared/ErrorState'
 import EmptyState from '@/components/shared/EmptyState'
 
-const COLORS = ['#00d4ff', '#8b5cf6', '#ffb800', '#ff3366', '#00ff88', '#8598b3']
+const COLORS = ['#00d4ff', '#9c74f7', '#ffb800', '#ff3366', '#00ff88', '#8598b3']
 
 export default function EventDistribution() {
   const { data, isLoading, error, refetch } = useQuery({

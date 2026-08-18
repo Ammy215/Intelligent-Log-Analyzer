@@ -17,7 +17,7 @@ export const COLORS = {
     green: '#00ff88',
     amber: '#ffb800',
     red: '#ff3366',
-    purple: '#8b5cf6',
+    purple: '#9c74f7',
     info: '#5b8cff',
   },
   text: {
@@ -87,7 +87,7 @@ export const CHART_COLORS = {
   MEDIUM: '#5b8cff',
   LOW: '#94a3b8',
   primary: '#00d4ff',
-  secondary: '#8b5cf6',
+  secondary: '#9c74f7',
 }
 
 // Refresh intervals (ms)
