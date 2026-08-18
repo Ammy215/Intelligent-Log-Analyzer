@@ -60,7 +60,7 @@ export default function ThreatHunting() {
       <div className="card p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5 text-accent-cyan" />
-          <h3 className="text-lg font-semibold">Filters</h3>
+          <h3 className="label-eyebrow">Filters</h3>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

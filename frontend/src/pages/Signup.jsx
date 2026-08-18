@@ -38,7 +38,7 @@ export default function Signup() {
           <div className="w-14 h-14 rounded-full bg-accent-green/10 border border-accent-green/25 flex items-center justify-center mx-auto mb-5">
             <MailCheck className="w-6 h-6 text-accent-green" />
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">Check your inbox</h2>
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">Check your inbox</h1>
           <p className="text-sm text-text-secondary mb-7 leading-relaxed">
             {result.message || `We sent a confirmation link to ${email}. Click it to activate your account, then sign in.`}
           </p>
@@ -53,7 +53,7 @@ export default function Signup() {
   return (
     <AuthLayout>
       <div className="mb-7">
-        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Create your workspace</h2>
+        <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Create your workspace</h1>
         <p className="text-sm text-text-secondary mt-1.5">
           You'll be the first member, with full access to invite and manage the rest of your team.
         </p>

@@ -83,8 +83,14 @@
     @apply hover:bg-bg-tertiary hover:text-text-primary;
   }
 
+  /* White on #FF3366 measures 3.55:1 — the most destructive action in the
+     product had the least readable label. The severity red is a semantic
+     token shared with badges and charts, so it isn't changed here; this
+     button gets a darkened shade of the same hue instead, on which white
+     reaches 4.51:1. */
   .btn-danger {
-    @apply bg-accent-red text-white;
+    @apply text-white;
+    background-color: #de2c58;
     @apply hover:brightness-110;
     @apply focus:ring-accent-red;
   }
@@ -156,9 +162,17 @@
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
   }
 
-  /* Pulse animation for critical items */
+  /* Attention pulse for critical items.
+     This used to animate `opacity` on the whole badge, which dragged the
+     label's contrast from 4.73:1 at rest down to 2.06:1 at the trough —
+     below WCAG AA for most of every cycle, on the highest-priority signal
+     in the product. Opacity can't be salvaged by narrowing the range
+     either: at rest the badge only clears AA by 0.23, so any perceptible
+     dimming fails. The pulse now animates a surrounding ring instead, so
+     the text and its background never change and contrast stays fixed at
+     4.73:1 through the entire cycle. */
   .pulse-critical {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   /* Fade in animation */
@@ -177,12 +191,25 @@
   }
 }
 
+/* Kept: still used by Tailwind's own animate-pulse (skeleton loaders),
+   where dimming a placeholder carries no text to make illegible. */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+/* Ring-only pulse — nothing that carries text changes, so the label's
+   contrast is constant for the whole cycle. */
+@keyframes pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 51, 102, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.28);
   }
 }
 
@@ -217,7 +244,8 @@
 
 .markdown-content h1,
 .markdown-content h2,
-.markdown-content h3 {
+.markdown-content h3,
+.markdown-content h4 {
   @apply font-semibold text-text-primary mt-6 mb-3;
 }
 
@@ -231,6 +259,12 @@
 
 .markdown-content h3 {
   @apply text-lg;
+}
+
+/* Report markdown is shifted down one level (see lib/markdown.jsx), so h4
+   is now a real level in these documents rather than an unused one. */
+.markdown-content h4 {
+  @apply text-base;
 }
 
 .markdown-content p {
@@ -264,4 +298,29 @@
 
 .markdown-content a {
   @apply text-accent-cyan hover:underline;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────
+   WCAG 2.2.2 (Pause, Stop, Hide): the CRITICAL badge ring pulses
+   indefinitely, and framer-motion animates every page transition. Users
+   who have asked their OS for reduced motion get the static end state
+   instead. Written as near-zero durations rather than `animation: none`
+   so animations still fire their completion events and nothing that
+   depends on onAnimationEnd stalls. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The ring is decorative — with motion off it should simply not be drawn,
+     rather than freezing mid-pulse at an arbitrary radius. */
+  .pulse-critical {
+    animation: none !important;
+    box-shadow: none !important;
+  }
 }

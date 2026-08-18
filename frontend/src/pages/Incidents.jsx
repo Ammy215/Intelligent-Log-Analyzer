@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AlertTriangle, Play, Filter, Network, Globe2, Brain, MousePointerClick, Loader2, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import { markdownHeadingShift } from '@/lib/markdown'
 import { incidentsAPI, reportsAPI } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import PageWrapper from '@/components/layout/PageWrapper'
@@ -102,7 +103,7 @@ export default function Incidents() {
             {isLoading && <LoadingState />}
             {error && <ErrorState error={error} onRetry={refetch} />}
             {!isLoading && incidents.length === 0 && (
-              <div className="card">
+              <div className="card p-6">
                 <EmptyState message="No incidents found" icon={AlertTriangle} />
               </div>
             )}
@@ -152,7 +153,7 @@ export default function Incidents() {
           )}
 
           {selectedIncident && detailLoading && (
-            <div className="card">
+            <div className="card p-6">
               <LoadingState />
             </div>
           )}
@@ -160,7 +161,7 @@ export default function Incidents() {
           {selectedIncident && detail && (
             <div className="space-y-5">
               {/* Header */}
-              <div className="card">
+              <div className="card p-6">
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-text-primary mb-1.5">{detail.title}</h2>
@@ -197,7 +198,7 @@ export default function Incidents() {
 
               {/* Attack Chain */}
               {detail.attack_chain && detail.attack_chain.length > 0 && (
-                <div className="card">
+                <div className="card p-6">
                   <h3 className="label-eyebrow mb-4 flex items-center gap-2">
                     <Network className="w-3.5 h-3.5" />
                     Attack Chain
@@ -221,7 +222,7 @@ export default function Incidents() {
 
               {/* Involved IPs */}
               {detail.source_ips && detail.source_ips.length > 0 && (
-                <div className="card">
+                <div className="card p-6">
                   <h3 className="label-eyebrow mb-4 flex items-center gap-2">
                     <Globe2 className="w-3.5 h-3.5" />
                     Involved IP Addresses
@@ -240,13 +241,13 @@ export default function Incidents() {
                   it. Report generation used to live only on the AI Analyst
                   page, leaving this panel dead below the fold. */}
               {detail.ai_report ? (
-                <div className="card">
+                <div className="card p-6">
                   <h3 className="label-eyebrow mb-4 flex items-center gap-2 text-accent-purple">
                     <Brain className="w-3.5 h-3.5" />
                     AI Analysis
                   </h3>
                   <div className="markdown-content text-sm prose-sm">
-                    <ReactMarkdown>{detail.ai_report}</ReactMarkdown>
+                    <ReactMarkdown components={markdownHeadingShift}>{detail.ai_report}</ReactMarkdown>
                   </div>
                 </div>
               ) : (

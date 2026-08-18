@@ -32,7 +32,7 @@ export default function Login() {
   return (
     <AuthLayout>
       <div className="mb-7">
-        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">Sign in</h2>
+        <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Sign in</h1>
         <p className="text-sm text-text-secondary mt-1.5">Welcome back to your security operations.</p>
       </div>
 

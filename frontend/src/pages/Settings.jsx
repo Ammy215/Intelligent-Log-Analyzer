@@ -12,7 +12,7 @@ export default function Settings() {
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-6">
             <Zap className="w-5 h-5 text-accent-cyan" />
-            <h3 className="text-lg font-semibold">Dashboard Preferences</h3>
+            <h3 className="label-eyebrow">Dashboard Preferences</h3>
           </div>
 
           <div className="space-y-4">
@@ -64,7 +64,7 @@ export default function Settings() {
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-6">
             <SettingsIcon className="w-5 h-5 text-accent-purple" />
-            <h3 className="text-lg font-semibold">API Configuration</h3>
+            <h3 className="label-eyebrow">API Configuration</h3>
           </div>
 
           <div className="space-y-6">
@@ -124,7 +124,7 @@ export default function Settings() {
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-6">
             <Bell className="w-5 h-5 text-accent-amber" />
-            <h3 className="text-lg font-semibold">Alert Thresholds</h3>
+            <h3 className="label-eyebrow">Alert Thresholds</h3>
           </div>
 
           <div className="space-y-6">
@@ -190,7 +190,7 @@ export default function Settings() {
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-6">
             <Database className="w-5 h-5 text-accent-cyan" />
-            <h3 className="text-lg font-semibold">Database Management</h3>
+            <h3 className="label-eyebrow">Database Management</h3>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-6">

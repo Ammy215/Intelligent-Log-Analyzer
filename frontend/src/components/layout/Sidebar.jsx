@@ -87,7 +87,7 @@ export default function Sidebar() {
           <div className="w-7 h-7 rounded-lg bg-accent-cyan/10 border border-accent-cyan/20 flex items-center justify-center">
             <Shield className="w-4 h-4 text-accent-cyan" />
           </div>
-          <h1 className="text-sm font-semibold text-text-primary">Log Analyzer</h1>
+          <p className="text-sm font-semibold text-text-primary">Log Analyzer</p>
         </div>
         <button
           onClick={() => setMobileOpen(true)}
@@ -120,7 +120,7 @@ export default function Sidebar() {
               <Shield className="w-4 h-4 text-accent-cyan" />
             </div>
             <div>
-              <h1 className="text-sm font-semibold leading-tight text-text-primary">Log Analyzer</h1>
+              <p className="text-sm font-semibold leading-tight text-text-primary">Log Analyzer</p>
               <p className="text-[11px] text-text-muted leading-tight">Security Operations</p>
             </div>
           </div>

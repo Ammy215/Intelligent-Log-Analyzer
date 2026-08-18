@@ -20,7 +20,7 @@ export default function MetricCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay: index * 0.04 }}
-      className="card p-5 hover:border-text-muted/40 transition-colors"
+      className="card p-6 hover:border-text-muted/40 transition-colors"
     >
       <div className="flex items-start justify-between mb-3">
         <p className="label-eyebrow">{title}</p>

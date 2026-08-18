@@ -63,9 +63,9 @@ export default function SetPassword() {
     return (
       <AuthLayout>
         <div className="text-center">
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">
             This link has expired
-          </h2>
+          </h1>
           <p className="text-sm text-text-secondary mb-7 leading-relaxed">
             Password links can only be used once. Open the most recent invite or reset email, or
             ask an admin to send you a new one.
@@ -82,9 +82,9 @@ export default function SetPassword() {
     return (
       <AuthLayout>
         <div className="text-center">
-          <h2 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary mb-2">
             Password set
-          </h2>
+          </h1>
           <p className="text-sm text-text-secondary">Taking you to sign in…</p>
         </div>
       </AuthLayout>
@@ -94,9 +94,9 @@ export default function SetPassword() {
   return (
     <AuthLayout>
       <div className="mb-7">
-        <h2 className="text-2xl font-semibold tracking-tight text-text-primary">
+        <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
           {linkType === 'recovery' ? 'Reset your password' : 'Set your password'}
-        </h2>
+        </h1>
         <p className="text-sm text-text-secondary mt-1.5">
           Pick something you don't use anywhere else.
         </p>

@@ -106,15 +106,15 @@ export default function LiveFeed() {
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="card p-4">
+        <div className="card p-4 sm:p-6">
           <p className="text-text-secondary text-sm mb-1">Events per Second</p>
           <p className="text-2xl font-bold">{logs.length > 0 ? '~2.5' : '0'}</p>
         </div>
-        <div className="card p-4">
+        <div className="card p-4 sm:p-6">
           <p className="text-text-secondary text-sm mb-1">Total in Feed</p>
           <p className="text-2xl font-bold">{logs.length}</p>
         </div>
-        <div className="card p-4">
+        <div className="card p-4 sm:p-6">
           <p className="text-text-secondary text-sm mb-1">Status</p>
           <p className="text-lg font-semibold">
             {isPaused ? (
@@ -124,7 +124,7 @@ export default function LiveFeed() {
             )}
           </p>
         </div>
-        <div className="card p-4">
+        <div className="card p-4 sm:p-6">
           <p className="text-text-secondary text-sm mb-1">New While Paused</p>
           <p className="text-2xl font-bold text-accent-cyan">{newLogsCount}</p>
         </div>
@@ -137,7 +137,7 @@ export default function LiveFeed() {
 
       {/* Log Stream */}
       <div className="card p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4">Log Stream</h3>
+        <h3 className="label-eyebrow mb-4">Log Stream</h3>
         <div
           ref={feedRef}
           className="bg-bg-primary rounded-lg p-4 h-[600px] overflow-y-auto custom-scrollbar font-mono text-sm space-y-2"

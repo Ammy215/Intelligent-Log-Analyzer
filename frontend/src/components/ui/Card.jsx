@@ -21,7 +21,7 @@ export function CardHeader({ className, children, ...props }) {
 
 export function CardTitle({ className, icon: Icon, iconClassName, children, ...props }) {
   return (
-    <h3 className={cn('flex items-center gap-2 text-sm font-semibold text-text-primary', className)} {...props}>
+    <h3 className={cn('label-eyebrow flex items-center gap-2', className)} {...props}>
       {Icon && <Icon className={cn('w-4 h-4 text-accent-cyan', iconClassName)} />}
       {children}
     </h3>

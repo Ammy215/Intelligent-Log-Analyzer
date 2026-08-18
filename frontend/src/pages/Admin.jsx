@@ -22,7 +22,7 @@ function MembersSection() {
 
   return (
     <div className="card p-6">
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
+      <h3 className="label-eyebrow mb-4 flex items-center gap-2">
         <Users className="w-5 h-5 text-accent-cyan" />
         Org Members ({members.length})
       </h3>
@@ -72,7 +72,7 @@ function AuditLogSection() {
 
   return (
     <div className="card p-6">
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
+      <h3 className="label-eyebrow mb-4 flex items-center gap-2">
         <ScrollText className="w-5 h-5 text-accent-amber" />
         Audit Log ({entries.length})
       </h3>
@@ -150,7 +150,7 @@ function DetectionRulesSection() {
 
   return (
     <div className="card p-6">
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
+      <h3 className="label-eyebrow mb-4 flex items-center gap-2">
         <Sliders className="w-5 h-5 text-accent-green" />
         Detection Rule Weights ({rules.length})
       </h3>
@@ -219,7 +219,7 @@ function CreditsLedgerSection() {
 
   return (
     <div className="card p-6">
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
+      <h3 className="label-eyebrow mb-4 flex items-center gap-2">
         <Receipt className="w-5 h-5 text-accent-purple" />
         Credits Ledger
       </h3>

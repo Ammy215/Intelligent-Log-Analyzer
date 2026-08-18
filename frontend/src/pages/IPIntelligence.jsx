@@ -125,7 +125,7 @@ export default function IPIntelligence() {
             <div className="card p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Database className="w-5 h-5 text-accent-red" />
-                <h3 className="font-semibold">AbuseIPDB</h3>
+                <h3 className="label-eyebrow">AbuseIPDB</h3>
               </div>
               {profile.threat_intelligence?.abuseipdb ? (
                 <div className="space-y-3">
@@ -157,7 +157,7 @@ export default function IPIntelligence() {
             <div className="card p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Globe className="w-5 h-5 text-accent-amber" />
-                <h3 className="font-semibold">AlienVault OTX</h3>
+                <h3 className="label-eyebrow">AlienVault OTX</h3>
               </div>
               {profile.threat_intelligence?.otx ? (
                 <div className="space-y-3">
@@ -189,7 +189,7 @@ export default function IPIntelligence() {
             <div className="card p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Globe className="w-5 h-5 text-accent-cyan" />
-                <h3 className="font-semibold">Geolocation</h3>
+                <h3 className="label-eyebrow">Geolocation</h3>
               </div>
               {profile.threat_intelligence?.geolocation ? (
                 <div className="space-y-2 text-sm">
@@ -228,7 +228,7 @@ export default function IPIntelligence() {
             <div className="card p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="w-5 h-5 text-accent-purple" />
-                <h3 className="font-semibold">Event Type Breakdown</h3>
+                <h3 className="label-eyebrow">Event Type Breakdown</h3>
               </div>
               {/* auto-fill rather than a fixed 4 columns: the tile count varies
                   per IP, and a hardcoded 4-wide grid stranded the remainder

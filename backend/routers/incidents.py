@@ -78,6 +78,10 @@ async def list_incidents(
                     "created_at": inc.get("created_at").isoformat() if inc.get("created_at") else None,
                     "total_events": inc.get("total_events"),
                     "source_ips": inc.get("source_ips", []),
+                    # Boolean rather than the report body: the Reports page
+                    # needs to know which incidents have a write-up without
+                    # dragging several KB of markdown per row through the list.
+                    "has_report": bool(inc.get("ai_report")),
                 }
             )
 

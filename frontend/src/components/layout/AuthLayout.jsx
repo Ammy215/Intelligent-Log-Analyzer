@@ -79,7 +79,7 @@ export default function AuthLayout({ children }) {
             <div className="w-14 h-14 rounded-full bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center mb-4">
               <Shield className="w-6 h-6 text-accent-cyan" />
             </div>
-            <h1 className="text-lg font-semibold">Log Analyzer</h1>
+            <p className="text-lg font-semibold">Log Analyzer</p>
             <p className="label-eyebrow mt-1">Security Operations</p>
           </div>
           {children}

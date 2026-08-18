@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { reportsAPI, incidentsAPI, billingAPI } from '@/lib/api'
 import PageWrapper from '@/components/layout/PageWrapper'
 import ReactMarkdown from 'react-markdown'
+import { markdownHeadingShift } from '@/lib/markdown'
 
 export default function AIAnalyst() {
   const queryClient = useQueryClient()
@@ -96,7 +97,7 @@ export default function AIAnalyst() {
         {/* Context Selector */}
         <div className="lg:col-span-1 card p-4 sm:p-6 min-w-0">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2">
+            <h3 className="label-eyebrow flex items-center gap-2">
               <Brain className="w-5 h-5 text-accent-purple" />
               Analysis Context
             </h3>
@@ -206,7 +207,7 @@ export default function AIAnalyst() {
 
         {/* Chat Interface */}
         <div className="lg:col-span-3 card p-4 sm:p-6 flex flex-col h-[560px] lg:h-[700px] min-w-0">
-          <h3 className="font-semibold mb-4">AI Analysis</h3>
+          <h3 className="label-eyebrow mb-4">AI Analysis</h3>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-4">
@@ -236,7 +237,7 @@ export default function AIAnalyst() {
                   >
                     {msg.role === 'assistant' ? (
                       <div className="markdown-content prose prose-invert max-w-none">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown components={markdownHeadingShift}>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
                       <p>{msg.content}</p>

@@ -200,7 +200,7 @@ export default function Billing() {
     <PageWrapper title="Billing" subtitle="Credit balance and top-ups">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Hero balance card */}
-        <div className="lg:col-span-2 card p-5 sm:p-7 relative overflow-hidden">
+        <div className="lg:col-span-2 card p-4 sm:p-6 relative overflow-hidden">
           <div
             className="absolute -top-16 -right-16 w-56 h-56 rounded-full opacity-[0.07] pointer-events-none"
             style={{ background: 'radial-gradient(circle, #00d4ff 0%, transparent 70%)' }}
@@ -264,7 +264,7 @@ export default function Billing() {
         </Card>
 
         {/* Top-up plan card — the one deliberate accent-ring highlight on this page, since it's the primary CTA */}
-        <div className="lg:col-span-2 card p-5 sm:p-6 border-accent-cyan/25 shadow-elevated">
+        <div className="lg:col-span-2 card p-4 sm:p-6 border-accent-cyan/25 shadow-elevated">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
             <div className="flex items-start gap-4 min-w-0">
               <div className="w-11 h-11 rounded-xl bg-accent-cyan/10 flex items-center justify-center shrink-0">
