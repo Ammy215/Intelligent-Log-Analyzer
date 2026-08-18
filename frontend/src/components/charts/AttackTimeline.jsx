@@ -79,21 +79,31 @@ export default function AttackTimeline() {
             iconType="circle"
             formatter={(value) => <span className="text-sm">{value}</span>}
           />
+          {/* fillOpacity 0.6 composited these bands against the dark navy card
+              down to HSL(341,60%,38%) — the hue survived but 40 points of
+              saturation and 22 of lightness did not, so CRITICAL read as a
+              dull maroon next to its own vivid legend swatch. The bands are
+              stacked and never overlap each other, so the transparency was
+              buying nothing except grid lines showing through. Raised to 0.9
+              and the boundary stroke given full opacity at 2px, so the edge
+              of each band is literally the true color. */}
           <Area
             type="monotone"
             dataKey="CRITICAL"
             stackId="1"
             stroke={CHART_COLORS.CRITICAL}
+            strokeWidth={2}
             fill={CHART_COLORS.CRITICAL}
-            fillOpacity={0.6}
+            fillOpacity={0.9}
           />
           <Area
             type="monotone"
             dataKey="HIGH"
             stackId="1"
             stroke={CHART_COLORS.HIGH}
+            strokeWidth={2}
             fill={CHART_COLORS.HIGH}
-            fillOpacity={0.6}
+            fillOpacity={0.9}
           />
         </AreaChart>
       </ResponsiveContainer>
