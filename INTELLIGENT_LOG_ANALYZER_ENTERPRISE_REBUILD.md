@@ -432,6 +432,22 @@ than `threat_scorer.py`: async, and MITRE ATT&CK-mapped, versus
 upgrade path, just one deliberately not taken during Phase 4.
 
 **Scope when this phase actually happens:**
+- **Fix the file before migrating anything to it.** Found during the
+  pre-deploy cleanup pass: `enterprise_threat_engine.py` currently defines
+  every one of its classes twice — `MITRE_ATTACK_MAPPING`,
+  `EnterpriseUserBehaviorAnalytics`, `EnterpriseThreatEngine`,
+  `EnterpriseRiskQuantifier`, `AdvancedThreatHunter` all appear a first
+  time, then again later in the file. Python silently keeps only the
+  second definition of each, and that second copy calls `pd.DataFrame`,
+  `np.mean`, `IsolationForest`, etc. — but the file never imports pandas,
+  numpy, or scikit-learn anywhere. Any code path that reaches those
+  methods (which is the entire live class, since it's the one that wins)
+  raises `NameError` immediately. This needs de-duplicating — decide
+  which copy is the intended one, or merge the two — and either add the
+  missing imports or drop the pandas/numpy/sklearn-dependent methods,
+  before any of the migration work below makes sense. Nothing currently
+  imports this module (confirmed via repo-wide grep during the same
+  cleanup pass), so the bug has never surfaced at runtime.
 - Migrate every current caller of `threat_scorer.py` (`logs.py`,
   `analysis.py`, `reports.py` via `ip_profiler.py`) to
   `enterprise_threat_engine.py` instead.
@@ -443,4 +459,16 @@ upgrade path, just one deliberately not taken during Phase 4.
   in `sample_logs/`, with their expected scores recorded beforehand) to
   confirm scoring behavior doesn't silently change in ways that break
   existing orgs' already-tuned weights.
+
+---
+
+## Known unused-but-live endpoints
+
+`routers/reports.py`'s `/reports/remediation` and `/reports/health` are
+registered and reachable, and `frontend/src/lib/api.js` wraps both
+(`reportsAPI.generateRemediationPlan`, `reportsAPI.checkHealth`) — but no
+page currently calls either wrapper. Same treatment as the engine flag
+above: not dead code, not a deletion candidate, just not wired to any UI
+yet. Worth remembering before assuming either one is safe to remove, or
+assuming it's actually reachable from the live product today.
 
