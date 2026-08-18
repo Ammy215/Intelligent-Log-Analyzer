@@ -9,13 +9,12 @@ This router provides:
 - POST /analysis/ip/{ip} - Full IP profile analysis
 """
 from datetime import datetime, timedelta
-from typing import Optional
 
 import pandas as pd
 from fastapi import APIRouter, Depends, Query, HTTPException
 
-from database import get_logs_collection, get_threat_actors_collection
-from analyzers.threat_scorer import calculate_threat_score, get_org_weights, get_threat_verdict
+from database import get_logs_collection
+from analyzers.threat_scorer import get_org_weights, get_threat_verdict
 from middleware.auth import CurrentUser, get_current_user
 from threat_intel.ip_profiler import get_ip_profiler
 

@@ -5,6 +5,7 @@ text — parse() here takes one already-extracted event record as an XML
 string (matching what python-evtx yields per record), not a raw text line.
 extract_records_from_evtx_bytes() handles the binary -> XML-strings step.
 """
+import logging
 import tempfile
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -15,6 +16,8 @@ import Evtx.Evtx as evtx
 
 from parsers.base_parser import BaseParser
 from models.log_entry import LogEntry
+
+logger = logging.getLogger(__name__)
 
 NS = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
 
@@ -107,10 +110,10 @@ class WindowsEventParser(BaseParser):
             )
 
         except ET.ParseError as e:
-            print(f"Windows event parser XML error: {e}")
+            logger.error(f"Windows event parser XML error: {e}")
             return None
         except Exception as e:
-            print(f"Windows event parser error: {e}")
+            logger.error(f"Windows event parser error: {e}")
             return None
 
     def parse_batch(self, raw_logs: list[str]) -> list[LogEntry]:

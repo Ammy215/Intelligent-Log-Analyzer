@@ -8,7 +8,7 @@ Learning: LLM API integration, streaming responses, token counting, error handli
 import asyncio
 import aiohttp
 import logging
-from typing import Optional, Dict, AsyncGenerator
+from typing import Optional, Dict
 
 from config import settings
 

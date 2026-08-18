@@ -15,11 +15,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, B
 from database import (
     get_logs_collection,
     get_incidents_collection,
-    get_threat_actors_collection,
 )
 from middleware.auth import CurrentUser, get_current_user
 from middleware.rbac import require_role
-from models.incident import Incident, ThreatActor
+from models.incident import Incident
 from notifications.triggers import notify_critical_incident
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])

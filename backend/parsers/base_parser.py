@@ -5,7 +5,7 @@ and standardized log entry creation.
 """
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from models.log_entry import LogEntry, GeoModel, ThreatIntelModel
 

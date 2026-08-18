@@ -3,12 +3,15 @@
 Parses /var/log/auth.log entries with a focus on sshd authentication events.
 Handles failed logins, successful logins, invalid users, brute force detection.
 """
+import logging
 import re
 from datetime import datetime
 from typing import Optional
 
 from parsers.base_parser import BaseParser
 from models.log_entry import LogEntry
+
+logger = logging.getLogger(__name__)
 
 
 class SSHParser(BaseParser):
@@ -65,7 +68,7 @@ class SSHParser(BaseParser):
             return None
 
         except Exception as e:
-            print(f"SSH parser error: {e}")
+            logger.error(f"SSH parser error: {e}")
             return None
 
     def parse_batch(self, raw_logs: list[str]) -> list[LogEntry]:

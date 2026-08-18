@@ -9,10 +9,8 @@ Fortune 500 production-level threat analysis with:
 - Advanced pattern detection without heavy ML dependencies
 """
 
-import asyncio
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional
-from collections import defaultdict
+from datetime import datetime
+from typing import Dict, List
 import logging
 
 logger = logging.getLogger(__name__)

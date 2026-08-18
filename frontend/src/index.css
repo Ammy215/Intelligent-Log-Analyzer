@@ -130,19 +130,9 @@
     @apply inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border;
   }
 
-  /* Status indicator dot */
-  .status-dot {
-    @apply w-2 h-2 rounded-full;
-  }
-
   /* Monospace text */
   .mono {
     @apply font-mono text-sm;
-  }
-
-  /* Chart container */
-  .chart-container {
-    @apply w-full h-full;
   }
 
   /* Tooltip styles */
@@ -152,16 +142,6 @@
 }
 
 @layer utilities {
-  /* Text gradient */
-  .text-gradient {
-    @apply bg-gradient-to-r from-accent-cyan to-accent-purple bg-clip-text text-transparent;
-  }
-
-  /* Glow effect */
-  .glow {
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-  }
-
   /* Attention pulse for critical items.
      This used to animate `opacity` on the whole badge, which dragged the
      label's contrast from 4.73:1 at rest down to 2.06:1 at the trough —
@@ -173,11 +153,6 @@
      4.73:1 through the entire cycle. */
   .pulse-critical {
     animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  /* Fade in animation */
-  .fade-in {
-    animation: fadeIn 0.2s ease-out;
   }
 }
 
@@ -210,17 +185,6 @@
   }
   50% {
     box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.28);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 

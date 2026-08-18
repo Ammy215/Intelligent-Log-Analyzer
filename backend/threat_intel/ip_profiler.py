@@ -13,8 +13,7 @@ from typing import Dict, List, Optional
 from threat_intel.abuseipdb_client import get_abuseipdb_client
 from threat_intel.otx_client import get_otx_client
 from threat_intel.geolocation_client import get_geoip_client
-from analyzers.threat_scorer import calculate_threat_score, get_threat_verdict
-from models.log_entry import ThreatIntelModel
+from analyzers.threat_scorer import calculate_threat_score
 
 
 logger = logging.getLogger(__name__)

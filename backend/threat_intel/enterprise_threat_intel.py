@@ -9,14 +9,10 @@ Fortune 500-grade threat intelligence integration:
 - Real-time threat landscape analysis
 """
 
-import asyncio
-import json
-import hashlib
 import aiohttp
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
-from collections import defaultdict
 import logging
 
 logger = logging.getLogger(__name__)

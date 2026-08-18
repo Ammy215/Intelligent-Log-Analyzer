@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { UploadCloud, FileText, Loader2, CheckCircle2, AlertCircle, X } from 'lucide-react'
+import { UploadCloud, Loader2, CheckCircle2, AlertCircle, X } from 'lucide-react'
 import { logsAPI } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
-import Button from '@/components/ui/Button'
 
 // Mirrors ALLOWED_LOG_EXTENSIONS in backend config — the server rejects
 // anything else with a 400, so catching it here just saves a round trip.

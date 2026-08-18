@@ -5,7 +5,7 @@ Pydantic v2 provides automatic validation, JSON schema generation, and serializa
 """
 import re
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 

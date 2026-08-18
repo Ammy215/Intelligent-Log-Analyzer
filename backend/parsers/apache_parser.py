@@ -7,12 +7,15 @@ Parses HTTP logs for:
 - 403/404 errors
 - HTTP methods and response codes
 """
+import logging
 import re
 from datetime import datetime
 from typing import Optional
 
 from parsers.base_parser import BaseParser
 from models.log_entry import LogEntry
+
+logger = logging.getLogger(__name__)
 
 
 class ApacheParser(BaseParser):
@@ -157,7 +160,7 @@ class ApacheParser(BaseParser):
             )
 
         except Exception as e:
-            print(f"Apache parser error: {e}")
+            logger.error(f"Apache parser error: {e}")
             return None
 
     def parse_batch(self, raw_logs: list[str]) -> list[LogEntry]:

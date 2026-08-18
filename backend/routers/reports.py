@@ -9,23 +9,17 @@ Provides endpoints for generating AI-powered security reports:
 Learning: API design for LLM integration, async operations, response formatting.
 """
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from analyzers.threat_scorer import get_org_weights
 from database import get_logs_collection, get_incidents_collection
-from middleware.auth import CurrentUser, get_current_user
+from middleware.auth import CurrentUser
 from middleware.rate_limit import rate_limit_by_org
 from middleware.rbac import require_role
 from threat_intel.ip_profiler import get_ip_profiler
 from report_generator.ai_client import get_ai_client
 from report_generator.gemini_client import GeminiError, generate_incident_report as gemini_generate_incident_report
-from report_generator.models import (
-    ReportMetadata,
-    ReportRequest,
-    ExecutiveSummary,
-)
 from billing.credits import InsufficientCreditsError, spend_credit
 
 
